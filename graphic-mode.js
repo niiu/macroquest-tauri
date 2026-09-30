@@ -21,4 +21,4 @@ function updateGraphicMode(){
   }else if(!enabled&&graphicApplied){for(const [key,node] of Object.entries(graphicNodes))graphicAnchors[key].after(node);}
   graphicLayout.hidden=!enabled;graphicApplied=enabled;graphicOwner=project;graphicScene=selected;
 }
-graphicToggle.onchange=()=>{project.graphicMode=graphicToggle.checked;updateGraphicMode();save();};
+graphicToggle.onchange=()=>{project.graphicMode=graphicToggle.checked;updateGraphicMode();if(typeof renderActorLayers==='function')renderActorLayers();save();};

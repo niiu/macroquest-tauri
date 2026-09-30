@@ -28,11 +28,12 @@ function renderActorLayers(){
     positionRemove();remove.onpointerdown=e=>e.stopPropagation();
     remove.onclick=e=>{e.stopPropagation();const index=owner.actors.indexOf(placement);if(index<0)return;owner.actors.splice(index,1);save();renderCharacters();};
     $('editor-actors').append(remove);
+    const positionAnswers=renderActorAnswerBadges(img,owner,placement);
     img.onpointerdown=e=>{
       if(e.button!==0||!$('move-actors').checked)return;e.preventDefault();
       const owner=scene(),placement=owner.actors[i],old={x:placement.x,y:placement.y},r=$('image-surface').getBoundingClientRect(),sx=e.clientX,sy=e.clientY;
       img.setPointerCapture(e.pointerId);
-      img.onpointermove=ev=>{placement.x=Math.max(0,Math.min(1,old.x+(ev.clientX-sx)/r.width));placement.y=Math.max(0,Math.min(1,old.y+(ev.clientY-sy)/r.height));img.style.left=placement.x*100+'%';img.style.top=placement.y*100+'%';positionRemove();};
+      img.onpointermove=ev=>{placement.x=Math.max(0,Math.min(1,old.x+(ev.clientX-sx)/r.width));placement.y=Math.max(0,Math.min(1,old.y+(ev.clientY-sy)/r.height));img.style.left=placement.x*100+'%';img.style.top=placement.y*100+'%';positionRemove();positionAnswers();};
       const end=ev=>{img.onpointermove=img.onpointerup=img.onpointercancel=null;if(img.hasPointerCapture(e.pointerId))img.releasePointerCapture(e.pointerId);if(ev.type==='pointercancel')Object.assign(placement,old);else save();if(placement.x!==old.x||placement.y!==old.y||ev.type==='pointercancel')renderActorLayers();};
       img.onpointerup=end;img.onpointercancel=end;
     };

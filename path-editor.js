@@ -6,7 +6,7 @@ function openPathEditor(source,choice=null,target=null,createdScene=false,onSave
   cancelConnection();pathDraft={source,original:choice,sceneTitles:new Map(),conditions:structuredClone(choice?.conditions||[]),effects:structuredClone(choice?.effects||[])};
   $('path-target-field').hidden=createdScene;
   pathDraft.onSaved=onSaved;
-  $('path-heading').textContent=choice?'Редактирование перехода':'Новый переход';$('path-source').textContent='Из сцены: '+source.title;
+  $('path-heading').textContent=source.dialogue?(choice?'Редактирование ответа':'Новый ответ'):(choice?'Редактирование перехода':'Новый переход');$('path-source').textContent='Из сцены: '+source.title;
   $('path-text').value=choice?.text||'Перейти в '+(project.scenes.find(s=>s.id===target)?.title||'сцену');
   $('path-target').replaceChildren();appendOptions($('path-target'),project.scenes.map(s=>[s.id,s.title||'Без названия']));$('path-target').value=choice?.target||target||source.id;
   renderPathSceneTitle();

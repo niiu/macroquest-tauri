@@ -35,3 +35,29 @@ $('actor-dialogue-next').onclick=()=>{
 };
 $('close-actor-dialogue').onclick=()=>actorDialogueDialog.close();
 actorDialogueDialog.addEventListener('close',()=>{actorDialogueContext=null;renderInspector();renderGraph();});
+
+const actorBadgePositions=new Map();
+function positionActorBadges(){
+  for(const [img,position] of actorBadgePositions){if(img.isConnected)position();else actorBadgePositions.delete(img);}
+}
+new ResizeObserver(positionActorBadges).observe($('image-surface'));
+function renderActorAnswerBadges(img,owner,placement){
+  for(const image of actorBadgePositions.keys())if(!image.isConnected)actorBadgePositions.delete(image);
+  const reply=QuestActorDialogue.resolve(project,owner,placement);
+  if(!project.graphicMode||!reply?.choices.length)return ()=>{};
+  const group=el('div','actor-answer-badges');group.setAttribute('aria-label','Ответы персонажа: '+img.alt);
+  reply.choices.forEach((choice,i)=>{
+    const button=el('button','actor-answer-badge',String(i+1));button.type='button';button.title=choice.text;
+    button.setAttribute('aria-label',`Ответ ${i+1} · ${img.alt}: ${choice.text}`);
+    button.onpointerdown=e=>e.stopPropagation();button.ondblclick=e=>e.stopPropagation();
+    button.onclick=e=>{e.stopPropagation();editActorAnswer(reply,choice);};group.append(button);
+  });
+  $('editor-actors').append(group);
+  const position=()=>{
+    const surface=$('image-surface').getBoundingClientRect(),art=img.getBoundingClientRect();
+    const left=Math.max(0,Math.min(surface.width-36,art.right-surface.left+6));
+    const top=Math.max(0,Math.min(surface.height-36,art.top-surface.top));
+    group.style.left=left+'px';group.style.top=top+'px';group.style.maxHeight=Math.max(36,surface.height-top)+'px';
+  };
+  actorBadgePositions.set(img,position);img.addEventListener('load',position);position();return position;
+}
