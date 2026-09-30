@@ -2,9 +2,10 @@
 let pathDraft=null;
 function variables(){return project.variables||[];}
 function appendOptions(select,entries){for(const [value,label] of entries){const option=el('option','',label);option.value=value;select.append(option);}return select;}
-function openPathEditor(source,choice=null,target=null,createdScene=false){
+function openPathEditor(source,choice=null,target=null,createdScene=false,onSaved=null){
   cancelConnection();pathDraft={source,original:choice,sceneTitles:new Map(),conditions:structuredClone(choice?.conditions||[]),effects:structuredClone(choice?.effects||[])};
   $('path-target-field').hidden=createdScene;
+  pathDraft.onSaved=onSaved;
   $('path-heading').textContent=choice?'Редактирование перехода':'Новый переход';$('path-source').textContent='Из сцены: '+source.title;
   $('path-text').value=choice?.text||'Перейти в '+(project.scenes.find(s=>s.id===target)?.title||'сцену');
   $('path-target').replaceChildren();appendOptions($('path-target'),project.scenes.map(s=>[s.id,s.title||'Без названия']));$('path-target').value=choice?.target||target||source.id;
@@ -65,8 +66,9 @@ $('path-form').onsubmit=e=>{
     if(original){if(!source.choices.includes(original))throw Error('Путь больше не существует.');Object.assign(original,data);}
     else source.choices.push({...data,zone:[]});
     for(const [id,title] of pathDraft.sceneTitles){const target=project.scenes.find(s=>s.id===id);if(target)target.title=title.trim();}
-    selected=source.id;activeChoice=original?source.choices.indexOf(original):source.choices.length-1;
-    closePathEditor();save();renderGraph();renderInspector();
+    const onSaved=pathDraft.onSaved;
+    if(!onSaved){selected=source.id;activeChoice=original?source.choices.indexOf(original):source.choices.length-1;}
+    closePathEditor();save();renderGraph();renderInspector();onSaved?.();
   }catch(error){$('path-error').textContent=error.message;}
 };
 function renderDiceTargets(){
@@ -79,7 +81,7 @@ $('path-dice').onchange=()=>{pathDraft.check=$('path-dice').checked?{targets:[''
 $('delete-path').onclick=()=>{
   if(!pathDraft?.original)return;
   if(!pathDraft.confirmDelete){pathDraft.confirmDelete=true;$('delete-path').textContent='Подтвердить удаление';$('path-error').textContent='Будут удалены путь, его условия и нарисованная зона. Нажмите «Подтвердить удаление» или «Отмена».';return;}
-  const {source,original}=pathDraft;source.choices=source.choices.filter(c=>c!==original);closePathEditor();save();renderGraph();renderInspector();
+  const {source,original,onSaved}=pathDraft;source.choices=source.choices.filter(c=>c!==original);closePathEditor();save();renderGraph();renderInspector();onSaved?.();
 };
 function openParameters(){$('variable-error').textContent='';renderVariables();$('parameters-dialog').showModal();}
 $('quest-parameters').onclick=$('path-parameters').onclick=$('effects-parameters').onclick=openParameters;

@@ -19,6 +19,9 @@ function renderActorLayers(){
   $('image-surface').classList.toggle('moving-actors',$('move-actors').checked);
   [...$('editor-actors').children].forEach((img,i)=>{
     const owner=scene(),placement=owner.actors[i];
+    img.ondblclick=e=>{e.preventDefault();e.stopPropagation();openActorDialogue(owner,placement);};
+    img.tabIndex=0;img.setAttribute('role','button');img.setAttribute('aria-label','Диалог персонажа: '+img.alt);img.title='Двойной щелчок — диалог персонажа';
+    img.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();openActorDialogue(owner,placement);}};
     const remove=el('button','actor-remove','×');remove.type='button';
     remove.title='Убрать со сцены: '+img.alt;remove.setAttribute('aria-label',remove.title);
     const positionRemove=()=>{remove.style.left=`clamp(15px, ${placement.x*100}%, calc(100% - 15px))`;remove.style.top=`max(30px, ${placement.y*100}%)`;};
@@ -30,7 +33,7 @@ function renderActorLayers(){
       const owner=scene(),placement=owner.actors[i],old={x:placement.x,y:placement.y},r=$('image-surface').getBoundingClientRect(),sx=e.clientX,sy=e.clientY;
       img.setPointerCapture(e.pointerId);
       img.onpointermove=ev=>{placement.x=Math.max(0,Math.min(1,old.x+(ev.clientX-sx)/r.width));placement.y=Math.max(0,Math.min(1,old.y+(ev.clientY-sy)/r.height));img.style.left=placement.x*100+'%';img.style.top=placement.y*100+'%';positionRemove();};
-      const end=ev=>{img.onpointermove=img.onpointerup=img.onpointercancel=null;if(img.hasPointerCapture(e.pointerId))img.releasePointerCapture(e.pointerId);if(ev.type==='pointercancel')Object.assign(placement,old);else save();renderActorLayers();};
+      const end=ev=>{img.onpointermove=img.onpointerup=img.onpointercancel=null;if(img.hasPointerCapture(e.pointerId))img.releasePointerCapture(e.pointerId);if(ev.type==='pointercancel')Object.assign(placement,old);else save();if(placement.x!==old.x||placement.y!==old.y||ev.type==='pointercancel')renderActorLayers();};
       img.onpointerup=end;img.onpointercancel=end;
     };
   });

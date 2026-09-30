@@ -1,4 +1,11 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+test('actor dialogue resolves linked reply, creates once and edits current reply for inherited actors',()=>{
+  const {resolve}=require('./actor-dialogue.js'),placement={character:'npc'},owner={id:'scene',x:10,y:20,actors:[placement]},quest={scenes:[owner],characters:[{id:'npc',name:'Страж'}]};
+  assert.equal(resolve(quest,owner,placement),null);
+  const reply=resolve(quest,owner,placement,true);assert.equal(reply.speaker,'Страж');assert.equal(placement.dialogue,reply.id);assert.equal(resolve(quest,owner,placement,true),reply);assert.equal(quest.scenes.length,2);
+  const inherited={...placement};reply.actors=[inherited];assert.equal(resolve(quest,reply,inherited),reply);
+  assert.equal(resolve(quest,owner,{}),null);
+});
 test('removing scene artwork clears placements and zones, preserves transitions and library',()=>{
   const actor={character:'npc',dialogue:'reply',x:.5,y:.8,width:.2},node={image:'image',actors:[actor],choices:[{text:'Go',target:'next',zone:[{}]}]};
   const library=[{id:'npc'}],calls=[];

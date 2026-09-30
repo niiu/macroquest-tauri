@@ -1,6 +1,6 @@
 {
   "name": "macroquest-editor",
-  "version": "0.2.11",
+  "version": "0.2.12",
   "private": true,
   "overrides": {
     "dompurify": "^3.4.13"
