@@ -34,7 +34,7 @@ function requestMinimap(){if(!minimapFrame)minimapFrame=requestAnimationFrame(()
 function mapTransform(){const size={width:parseFloat($('graph').style.width)||1000,height:parseFloat($('graph').style.height)||780},scale=Math.min(220/size.width,110/size.height);return {...size,scale,x:(220-size.width*scale)/2,y:(110-size.height*scale)/2};}
 function drawMinimap(){
   const ctx=mapCanvas.getContext('2d'),m=mapTransform();ctx.clearRect(0,0,220,110);ctx.fillStyle='#11180f';ctx.fillRect(m.x,m.y,m.width*m.scale,m.height*m.scale);
-  for(const s of project.scenes){ctx.fillStyle=s.id===selected?'#d7e89e':'#819768';ctx.fillRect(m.x+s.x*m.scale,m.y+s.y*m.scale,Math.max(2,220*m.scale),Math.max(2,154*m.scale));}
+  const shown=new Set();for(const original of project.scenes){const s=typeof QuestChapters==='undefined'?original:QuestChapters.proxy(project,original);if(shown.has(s.id))continue;shown.add(s.id);ctx.fillStyle=original.id===selected?'#d7e89e':'#819768';ctx.fillRect(m.x+s.x*m.scale,m.y+s.y*m.scale,Math.max(2,220*m.scale),Math.max(2,154*m.scale));}
   ctx.strokeStyle='#f3e3b0';ctx.lineWidth=1;ctx.fillStyle='#d5e6a422';
   const x=m.x+graphViewport.scrollLeft/zoom*m.scale,y=m.y+graphViewport.scrollTop/zoom*m.scale,w=Math.min(m.width,graphViewport.clientWidth/zoom)*m.scale,h=Math.min(m.height,graphViewport.clientHeight/zoom)*m.scale;
   ctx.fillRect(x,y,w,h);ctx.strokeRect(x,y,w,h);

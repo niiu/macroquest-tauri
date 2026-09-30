@@ -94,11 +94,11 @@ function renderGraph(){
   project.scenes.forEach((s,i)=>{
     const item=el('button','scene-item'+(s.id===selected?' active':''));item.append(el('span','number',String(i+1).padStart(2,'0')));
     const label=el('span','',s.title||'Без названия');label.append(el('small','',s.dialogue?'Диалог':s.id===project.start?'Начальная сцена':(s.choices.length||dialogueLinks(s).length)?'Сцена':'Финал'));item.append(label);item.onclick=()=>select(s.id);$('scene-list').append(item);
-    item.draggable=true;item.title='Перетащите для изменения порядка. Alt + ↑/↓ — переместить с клавиатуры.';
+    item.dataset.sceneId=s.id;item.draggable=true;item.title='Перетащите для изменения порядка. Alt + ↑/↓ — переместить с клавиатуры.';
     item.ondragstart=e=>{sceneDragId=s.id;e.dataTransfer.setData('text/plain',s.id);e.dataTransfer.effectAllowed='move';};
     item.ondragover=e=>{if(sceneDragId){e.preventDefault();e.dataTransfer.dropEffect='move';}};
     item.ondrop=e=>{e.preventDefault();const r=item.getBoundingClientRect();if(sceneDragId)moveScene(sceneDragId,s.id,e.clientY>r.top+r.height/2);sceneDragId=null;};item.ondragend=()=>{sceneDragId=null;};
-    item.onkeydown=e=>{if(!e.altKey||!['ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const index=project.scenes.indexOf(s),other=index+(e.key==='ArrowUp'?-1:1);if(other<0||other>=project.scenes.length)return;[project.scenes[index],project.scenes[other]]=[project.scenes[other],project.scenes[index]];save();renderGraph();$('scene-list').children[other].focus();};
+    item.onkeydown=e=>{if(!e.altKey||!['ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const index=project.scenes.indexOf(s),other=index+(e.key==='ArrowUp'?-1:1);if(other<0||other>=project.scenes.length)return;[project.scenes[index],project.scenes[other]]=[project.scenes[other],project.scenes[index]];save();renderGraph();[...document.querySelectorAll('.scene-item')].find(n=>n.dataset.sceneId===s.id)?.focus();};
     const node=el('div','node'+(s.id===selected?' selected':''));node.style.left=s.x+'px';node.style.top=s.y+'px';node.dataset.sceneId=s.id;
     node.style.minHeight=nodeHeight(s)+'px';
     const card=el('button','node-card');card.setAttribute('aria-label','Редактировать: '+s.title);
@@ -120,10 +120,11 @@ function renderGraph(){
     const output=el('button','node-port port-out','+');output.setAttribute('aria-label','Проложить путь из: '+s.title);output.title='Перетащите к другой сцене или нажмите и выберите сцену';
     output.onpointerdown=e=>beginConnection(e,s,output);output.onclick=e=>{e.stopPropagation();if(e.detail===0){connectionSource=s;setConnectionStatus();}};
     node.append(output);$('nodes').append(node);
-  });drawEdges();setConnectionStatus();
+  });if(typeof renderChapterGroups==='function')renderChapterGroups();drawEdges();setConnectionStatus();
 }
 function svgEl(name,attributes){const n=document.createElementNS('http://www.w3.org/2000/svg',name);for(const [k,v] of Object.entries(attributes))n.setAttribute(k,v);return n;}
 function edgeGeometry(s,t,lane,choice){
+  if(typeof QuestChapters!=='undefined'){s=QuestChapters.proxy(project,s);t=QuestChapters.proxy(project,t);}
   const inputIndex=incomingPaths(t.id).findIndex(p=>p.choice===choice);
   const x=s.x+220,y=s.y+76,tx=t.x,ty=t.y+76+Math.max(0,inputIndex)*28,offset=lane*30;
   if(s.id===t.id){const top=Math.max(8,s.y-48-offset);return {d:`M ${x} ${y} C ${x+100} ${y}, ${x+95} ${top}, ${s.x+110} ${top} C ${s.x-85} ${top}, ${s.x-85} ${ty}, ${tx} ${ty}`,lx:s.x+110,ly:top};}
@@ -136,7 +137,7 @@ function drawEdges(){
   const defs=svgEl('defs',{}),marker=svgEl('marker',{id:'path-arrow',viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'});marker.append(svgEl('path',{d:'M 0 0 L 10 5 L 0 10 z',fill:'#aabc7d'}));defs.append(marker);svg.append(defs);
   for(const s of project.scenes){
     const lanes=new Map();
-    for(const c of s.choices){for(const target of pathTargets(c)){const t=project.scenes.find(n=>n.id===target);if(!t)continue;
+    for(const c of s.choices){for(const target of pathTargets(c)){const t=project.scenes.find(n=>n.id===target);if(!t)continue;if(typeof QuestChapters!=='undefined'&&QuestChapters.internal(project,s,t))continue;
       const lane=lanes.get(t.id)||0;lanes.set(t.id,lane+1);const g=edgeGeometry(s,t,lane,c);
       const path=svgEl('path',{d:g.d,fill:'none',stroke:s.id===selected?'#aabc7d':'#647953','stroke-width':2,'marker-end':'url(#path-arrow)'});svg.append(path);
       const hit=svgEl('path',{d:g.d,fill:'none',stroke:'transparent','stroke-width':18,class:'edge-hit'});hit.onclick=e=>{e.stopPropagation();if(!connectionSource)openPathEditor(s,c);};svg.append(hit);
@@ -147,7 +148,7 @@ function drawEdges(){
     }
     for(const link of dialogueLinks(s)){
       const t=project.scenes.find(n=>n.id===link.target),lane=lanes.get(t.id)||0;lanes.set(t.id,lane+1);
-      const g=edgeGeometry(s,t,lane,link.actor);
+      if(typeof QuestChapters!=='undefined'&&QuestChapters.internal(project,s,t))continue;const g=edgeGeometry(s,t,lane,link.actor);
       svg.append(svgEl('path',{d:g.d,fill:'none',stroke:'#8ecbd8','stroke-width':2,'stroke-dasharray':'7 5','marker-end':'url(#path-arrow)'}));
       const open=e=>{e.stopPropagation();if(!connectionSource)select(t.id);};
       const hit=svgEl('path',{d:g.d,fill:'none',stroke:'transparent','stroke-width':18,class:'edge-hit'});hit.onclick=open;svg.append(hit);
@@ -162,8 +163,8 @@ function drawEdges(){
 function dragScene(e,s,node,card){
   if(e.button!==0)return;const startX=e.clientX,startY=e.clientY,x=s.x,y=s.y,size=QuestGraphArea.bounds(project,nodeHeight),height=nodeHeight(s);let moved=false;
   card.setPointerCapture(e.pointerId);
-  card.onpointermove=ev=>{if(Math.hypot(ev.clientX-startX,ev.clientY-startY)>5)moved=true;if(!moved)return;Object.assign(s,QuestGraphArea.position(size,x+(ev.clientX-startX)/zoom,y+(ev.clientY-startY)/zoom,height));node.style.left=s.x+'px';node.style.top=s.y+'px';drawEdges();requestMinimap();};
-  const end=ev=>{card.onpointermove=card.onpointerup=card.onpointercancel=null;if(card.hasPointerCapture(e.pointerId))card.releasePointerCapture(e.pointerId);if(moved){node.dataset.suppressUntil=performance.now()+350;if(ev.type==='pointercancel'){s.x=x;s.y=y;node.style.left=x+'px';node.style.top=y+'px';drawEdges();requestMinimap();}else save();}};
+  card.onpointermove=ev=>{if(Math.hypot(ev.clientX-startX,ev.clientY-startY)>5)moved=true;if(!moved)return;Object.assign(s,QuestGraphArea.position(size,x+(ev.clientX-startX)/zoom,y+(ev.clientY-startY)/zoom,height));node.style.left=s.x+'px';node.style.top=s.y+'px';drawEdges();requestMinimap();if(typeof renderChapterFrames==='function')renderChapterFrames();};
+  const end=ev=>{card.onpointermove=card.onpointerup=card.onpointercancel=null;if(card.hasPointerCapture(e.pointerId))card.releasePointerCapture(e.pointerId);if(moved){node.dataset.suppressUntil=performance.now()+350;if(ev.type==='pointercancel'){s.x=x;s.y=y;node.style.left=x+'px';node.style.top=y+'px';drawEdges();requestMinimap();if(typeof renderChapterFrames==='function')renderChapterFrames();}else save();}};
   card.onpointerup=end;card.onpointercancel=end;
 }
 function setConnectionStatus(){

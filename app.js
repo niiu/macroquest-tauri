@@ -14,6 +14,7 @@ function validate(p){
   if(ids.size!==p.scenes.length || !ids.has(p.start)) throw Error('Проверьте идентификаторы и начальную сцену.');
   QuestRules.validateVariables(p.variables||[]);
   QuestLayers.validate(p);
+  if(typeof QuestChapters!=='undefined')QuestChapters.validate(p);
   if(p.graphicMode!==undefined&&typeof p.graphicMode!=='boolean')throw Error('Некорректная настройка графического режима.');
   if(p.atlasLinks!==undefined&&typeof p.atlasLinks!=='boolean')throw Error('Некорректная настройка ссылок атласа.');
   if(p.atlasEntries!==undefined){
@@ -58,8 +59,8 @@ window.addEventListener('beforeunload',e=>{if(saveTimer||pendingSaves||saveFaile
 function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
 function setEditorOpen(open){$('editor-body').hidden=!open;$('collapse-editor').textContent=open?'Свернуть ↓':'Открыть редактор ↑';$('collapse-editor').setAttribute('aria-expanded',String(open));}
 $('collapse-editor').onclick=()=>setEditorOpen($('editor-body').hidden);
-function select(id){$('next-new-location').checked=false;selected=id;activeChoice=0;setEditorOpen(true);renderGraph();renderInspector();openSceneEditor();}
-function renderInspector(){const s=scene();$('scene-dialogue').checked=!!s.dialogue;$('scene-dialogue').disabled=project.scenes.some(n=>n.actors?.some(p=>p.dialogue===s.id));$('scene-heading').textContent=s.title||'Сцена без названия';$('scene-id').textContent=s.dialogue?'ДИАЛОГ':s.id===project.start?'НАЧАЛО':'СЦЕНА';$('scene-title').value=s.title;$('scene-text').value=s.text;$('set-start').disabled=s.id===project.start;$('delete-scene').disabled=project.scenes.length===1;renderChoices();renderImageEditor();renderCharacters();renderDialogueEditor();if(typeof renderAtlasTextPreview==='function')renderAtlasTextPreview();if(typeof updateGraphicMode==='function')updateGraphicMode();}
+function select(id){const chapter=project.chapters?.find(c=>c.id===project.scenes.find(s=>s.id===id)?.chapter);if(chapter?.collapsed){chapter.collapsed=false;save();}$('next-new-location').checked=false;selected=id;activeChoice=0;setEditorOpen(true);renderGraph();renderInspector();openSceneEditor();}
+function renderInspector(){const s=scene();if(typeof renderChapterSelect==='function')renderChapterSelect();$('scene-dialogue').checked=!!s.dialogue;$('scene-dialogue').disabled=project.scenes.some(n=>n.actors?.some(p=>p.dialogue===s.id));$('scene-heading').textContent=s.title||'Сцена без названия';$('scene-id').textContent=s.dialogue?'ДИАЛОГ':s.id===project.start?'НАЧАЛО':'СЦЕНА';$('scene-title').value=s.title;$('scene-text').value=s.text;$('set-start').disabled=s.id===project.start;$('delete-scene').disabled=project.scenes.length===1;renderChoices();renderImageEditor();renderCharacters();renderDialogueEditor();if(typeof renderAtlasTextPreview==='function')renderAtlasTextPreview();if(typeof updateGraphicMode==='function')updateGraphicMode();}
 function renderChoices(){
   const s=scene();activeChoice=Math.max(0,Math.min(activeChoice,s.choices.length-1));$('choices').replaceChildren();
   s.choices.forEach((c,i)=>{
