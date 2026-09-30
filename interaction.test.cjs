@@ -1,4 +1,11 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+test('removing scene artwork clears placements and zones, preserves transitions and library',()=>{
+  const actor={character:'npc',dialogue:'reply',x:.5,y:.8,width:.2},node={image:'image',actors:[actor],choices:[{text:'Go',target:'next',zone:[{}]}]};
+  const library=[{id:'npc'}],calls=[];
+  const body=fs.readFileSync('image-editor.js','utf8').split("$('remove-image').onclick=()=>{")[1].split('\n};')[0];
+  vm.runInNewContext('(()=>{'+body+'})();',{scene:()=>node,confirm:()=>true,finishStroke:()=>{},save:()=>{},renderImageEditor:()=>{},renderCharacters:()=>calls.push('characters'),renderChoices:()=>{},renderGraph:()=>{}});
+  assert.equal(node.image,undefined);assert.equal(node.actors.length,0);assert.equal(node.choices[0].zone.length,0);assert.equal(node.choices[0].target,'next');assert.equal(library.length,1);assert.deepEqual(calls,['characters']);
+});
 function pointerHarness(){
   class Target extends EventTarget{
     setPointerCapture(id){this.id=id;} hasPointerCapture(id){return this.id===id;}

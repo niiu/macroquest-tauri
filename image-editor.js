@@ -107,8 +107,8 @@ $('image-file').onchange=async e=>{
   }catch(err){alert(err.message);}finally{e.target.value='';syncZoneTools();}
 };
 $('remove-image').onclick=()=>{
-  if(!scene().image||!confirm('Убрать изображение и все его зоны? Действия и переходы сохранятся.'))return;
-  delete scene().image;scene().choices.forEach(c=>{c.zone=[];});save();renderImageEditor();renderChoices();renderGraph();
+  if(!scene().image||!confirm('Убрать изображение, все его зоны и слои персонажей? Персонажи в библиотеке, диалоги и переходы сохранятся.'))return;
+  finishStroke(true);delete scene().image;scene().actors=[];scene().choices.forEach(c=>{c.zone=[];});save();renderImageEditor();renderCharacters();renderChoices();renderGraph();
 };
 
 function renderPlayerImage(s){
