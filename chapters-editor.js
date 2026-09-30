@@ -51,5 +51,5 @@ function renderChapterGroups(){
   const loose=items.filter(item=>!project.scenes.find(s=>s.id===item.dataset.sceneId)?.chapter);
   if(project.chapters?.length&&loose.length){host.append(el('div','ungrouped-heading','Без главы'));loose.forEach(item=>host.append(item));}
   for(const n of document.querySelectorAll('#nodes [data-scene-id]')){const s=project.scenes.find(s=>s.id===n.dataset.sceneId);n.hidden=!!project.chapters?.find(c=>c.id===s?.chapter&&c.collapsed);}
-  renderChapterFrames();
+  renderChapterFrames();if(typeof renderGraphSelection==='function')renderGraphSelection();
 }
