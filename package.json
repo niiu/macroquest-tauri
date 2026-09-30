@@ -1,12 +1,27 @@
 {
   "name": "macroquest-editor",
-  "version": "0.1.0",
+  "version": "0.2.10",
   "private": true,
+  "overrides": {
+    "dompurify": "^3.4.13"
+  },
   "description": "Редактор графических квестов с автономным HTML-экспортом",
   "scripts": {
     "start": "node dev-server.cjs",
-    "test": "node --test graph-area.test.cjs rules.test.cjs validate.test.cjs saves.test.cjs html-export.test.cjs scene-features.test.cjs character-library.test.cjs",
-    "build:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File packaging/windows/build.ps1",
-    "test:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File packaging/windows/smoke-test.ps1"
+    "test": "node --test graph-area.test.cjs rules.test.cjs validate.test.cjs saves.test.cjs html-export.test.cjs scene-features.test.cjs character-library.test.cjs atlas.test.cjs workspace.test.cjs interaction.test.cjs graphic-mode.test.cjs",
+    "build:windows": "tauri build",
+    "test:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File packaging/windows/smoke-test.ps1",
+    "postinstall": "node prepare-vendor.cjs",
+    "build:frontend": "node prepare-vendor.cjs && node build-frontend.cjs",
+    "tauri": "tauri",
+    "desktop": "tauri dev",
+    "build:windows:legacy": "powershell -NoProfile -ExecutionPolicy Bypass -File packaging/windows/build.ps1"
+  },
+  "dependencies": {
+    "@toast-ui/editor": "^3.2.2"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.12.0",
+    "esbuild": "^0.28.2"
   }
 }

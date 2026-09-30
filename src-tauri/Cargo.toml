@@ -1,0 +1,13 @@
+[package]
+name = "macroquest"
+version = "0.2.10"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["devtools"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde_json = "1"
+rfd = "0.15"

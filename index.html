@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Макроквест — редактор историй</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="vendor/toastui-editor.min.css">
+  <link rel="stylesheet" href="vendor/toastui-editor-dark.css">
+  <link rel="stylesheet" href="workspace.css">
 </head>
 <body>
   <header class="topbar"><a class="brand" href="./">М<span>К</span> <strong>МАКРОКВЕСТ<small>МАСТЕРСКАЯ ИСТОРИЙ</small></strong></a><div class="project-name">Безымянные земли <span>/</span> Редактор</div><button id="play" class="primary">▶ Пройти квест</button></header>
@@ -43,13 +46,9 @@
   </dialog>
   <dialog id="parameters-dialog" aria-labelledby="parameters-heading"><div class="dialog-heading"><div><div class="eyebrow">СОСТОЯНИЕ ПЕРСОНАЖА</div><h2 id="parameters-heading">Параметры квеста</h2></div><button id="close-parameters" class="icon" aria-label="Закрыть параметры квеста">×</button></div><p class="hint">Задайте характеристики, предметы и флаги, затем используйте их в условиях путей. Начальные значения применяются при запуске квеста.</p><div id="variables-list"></div><form id="variable-form" class="variable-form"><label class="field">Тип<select id="variable-type"><option value="stat">Характеристика</option><option value="item">Предмет</option><option value="flag">Флаг</option></select></label><label class="field">Название<input id="variable-name" required maxlength="100" placeholder="Например: Сила, Ключ, Дверь открыта"></label><button class="primary" type="submit">Добавить параметр</button></form><p id="variable-error" class="form-error" role="alert"></p></dialog>
   <dialog id="player"><div class="player-top"><span class="eyebrow">ПРЕДПРОСМОТР КВЕСТА</span><button id="close-player" class="icon" aria-label="Закрыть">×</button></div><div class="ornament">✦</div><h2 id="play-title"></h2><div id="preview-saves"></div><div id="play-image-wrap" hidden><div class="image-surface"><img id="play-image" alt="Локация квеста"><div id="play-actors" class="actor-layer"></div><div id="play-image-paths" class="image-paths"></div><canvas id="play-zone-canvas" aria-label="Нажмите на зону действия на изображении"></canvas></div><div class="play-image-tools"><span id="play-hotspot" role="status">Выберите область на изображении</span><label class="toggle"><input type="checkbox" id="play-show-zones"> Подсветить зоны</label></div></div><details id="player-state-panel"><summary>Состояние персонажа · проверка условий</summary><p class="hint">Меняйте значения для проверки путей. Эти изменения действуют только в текущем прохождении.</p><div id="player-state"></div></details><p id="play-text"></p><p id="play-roll" role="status"></p><div id="play-choices"></div><button id="restart" class="quiet">↺ Начать сначала</button></dialog>
-  <script src="scene-layers.js"></script><script src="zones.js"></script>
+  <script src="diagnostics.js"></script><script src="atlas.js"></script><script src="scene-layers.js"></script><script src="zones.js"></script>
   <script src="storage.js"></script><script src="rules.js"></script>
   <script src="saves.js"></script><script src="html-export.js"></script><script src="app.js"></script>
-  <script src="graph-area.js"></script><script src="graph-editor.js"></script><script src="path-editor.js"></script><script src="character-editor.js"></script><script src="graph-navigation.js"></script><script src="image-editor.js"></script>
+  <script src="graph-area.js"></script><script src="graph-editor.js"></script><script src="path-editor.js"></script><script src="pointer-drag.js"></script><script src="character-editor.js"></script><script src="graph-navigation.js"></script><script src="vendor/toastui-editor-all.min.js"></script><script src="workspace.js"></script><script src="graphic-mode.js"></script><script src="image-editor.js"></script>
 </body>
 </html>
-
-
-
-

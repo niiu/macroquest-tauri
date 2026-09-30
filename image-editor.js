@@ -38,7 +38,11 @@ function renderImageEditor(){
   syncZoneTools();renderActorLayers();
 }
 $('zone-choice').onchange=e=>{activeChoice=Number(e.target.value);renderChoices();paintZones();};
-function chooseTool(tool){paintTool=tool;$('show-zones').checked=true;syncZoneTools();paintZones();}
+function chooseTool(tool){
+  // Drawing and actor positioning share the surface, but must never capture input together.
+  finishStroke(true);paintTool=tool;$('move-actors').checked=false;renderActorLayers();
+  $('show-zones').checked=true;syncZoneTools();paintZones();
+}
 $('brush-tool').onclick=()=>chooseTool('paint');$('eraser-tool').onclick=()=>chooseTool('erase');
 $('brush-size').oninput=e=>{$('brush-size-label').textContent=e.target.value+' px';};
 $('show-zones').onchange=paintZones;
@@ -126,12 +130,9 @@ $('play-show-zones').onchange=drawPlayerZones;
 async function initialize(){
   document.querySelector('.workspace').inert=true;$('play').disabled=true;$('save-status').textContent='Загрузка проекта…';
   try{
-    let stored;
-    try{stored=await QuestStorage.read();}catch(err){/* Legacy text projects can still be read if IndexedDB is unavailable. */}
-    if(stored)project=validate(stored);
-    else {const raw=localStorage.getItem(STORAGE_KEY);if(raw)project=validate(JSON.parse(raw));}
+    await initializeLibrary(project);
     selected=project.start;$('save-status').textContent='Проект загружен';
-  }catch(err){$('save-status').textContent='Сохранение не прочитано. Открыт пример.';}
+  }catch(err){$('save-status').textContent='Хранилище не прочитано: '+err.message;return;}
   render();document.querySelector('.workspace').inert=false;$('play').disabled=false;
 }
 initialize();

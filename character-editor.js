@@ -1,5 +1,6 @@
 'use strict';
-let characterUpload=null,dragCharacter=null;
+let characterUpload=null;
+const cancelCharacterDrags=[];
 const characterPictures=new Map();
 function selectedPicture(character){return QuestLayers.picture(character,characterPictures.get(character.id))||QuestLayers.picture(character);}
 function pictureSelect(character,value,label,onChange){
@@ -35,6 +36,7 @@ function renderActorLayers(){
   });
 }
 function renderCharacters(){
+  cancelCharacterDrags.splice(0).forEach(cancel=>cancel());
   $('character-list').replaceChildren();$('actor-list').replaceChildren();
   for(const character of project.characters||[]){
     const current=selectedPicture(character),card=el('div','character-card'),image=el('img');image.src=current.image;image.alt=character.name;image.draggable=false;
@@ -50,9 +52,30 @@ function renderCharacters(){
     };
     const add=el('button','','+ На сцену');add.disabled=!scene().image;add.onclick=()=>addActor(character.id);
     const remove=el('button','quiet','Удалить персонажа');remove.onclick=()=>{if(project.scenes.some(s=>s.actors?.some(p=>p.character===character.id))){$('character-status').textContent='Сначала уберите персонажа со всех сцен.';return;}project.characters=project.characters.filter(c=>c!==character);save();renderCharacters();};
-    card.draggable=true;card.ondragstart=e=>{dragCharacter=character.id;e.dataTransfer.setData('text/plain',character.id);e.dataTransfer.effectAllowed='copy';};card.ondragend=()=>{dragCharacter=null;};
+    card.draggable=false;image.title='Перетащите на фон сцены';
+    let preview=null,owner=null,quest=null;
+    const surface=$('image-surface');
+    const dropPoint=e=>{
+      if(scene()!==owner||project!==quest||!owner?.image)return null;
+      const r=surface.getBoundingClientRect(),hit=document.elementFromPoint(e.clientX,e.clientY);
+      if(!r.width||!r.height||!hit||!surface.contains(hit)||e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)return null;
+      return {x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height};
+    };
+    const cleanup=()=>{preview?.remove();preview=null;surface.classList.remove('character-drop-target');card.classList.remove('character-dragging');};
+    cancelCharacterDrags.push(QuestPointerDrag.bind(card,{
+      canStart:e=>!e.target.closest('input,select,button,textarea,a')&&!!scene().image,
+      start:()=>{
+        owner=scene();quest=project;finishStroke(true);$('brush-cursor').hidden=true;
+        preview=el('img','character-drag-preview');preview.src=current.image;preview.alt='';preview.draggable=false;
+        // A modal dialog is in the top layer: body-level previews are hidden beneath it.
+        ($('scene-dialog').open?$('scene-dialog'):document.body).append(preview);card.classList.add('character-dragging');
+      },
+      move:e=>{preview.style.left=e.clientX+'px';preview.style.top=e.clientY+'px';surface.classList.toggle('character-drop-target',!!dropPoint(e));},
+      end:e=>{const point=dropPoint(e);cleanup();if(point)addActor(character.id,point.x,point.y);},
+      cancel:cleanup
+    }));
     const count=project.scenes.filter(s=>s.actors?.some(p=>p.character===character.id)).length;
-    card.append(image,name,el('small','hint',`${QuestLayers.pictures(character).length} картинок · на ${count} сценах`),selector,extra,change,removePicture,add,remove);$('character-list').append(card);
+    card.append(image,name,el('small','hint',`${QuestLayers.pictures(character).length} картинок · на ${count} сценах`),selector,extra,change,removePicture,add,remove);if(character.description)card.append(el('p','hint',character.description));$('character-list').append(card);
   }
   (scene().actors||[]).forEach((placement,index)=>{
     const character=(project.characters||[]).find(c=>c.id===placement.character);if(!character)return;
@@ -72,9 +95,7 @@ function renderCharacters(){
   });
   renderActorLayers();
 }
-$('move-actors').onchange=renderActorLayers;
-$('image-surface').addEventListener('dragover',e=>{if(dragCharacter&&scene().image){e.preventDefault();e.dataTransfer.dropEffect='copy';}});
-$('image-surface').addEventListener('drop',e=>{if(!dragCharacter||!scene().image)return;e.preventDefault();const r=$('image-surface').getBoundingClientRect();addActor(dragCharacter,Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),Math.max(0,Math.min(1,(e.clientY-r.top)/r.height)));dragCharacter=null;});
+$('move-actors').onchange=()=>{finishStroke(true);$('brush-cursor').hidden=true;renderActorLayers();};
 $('add-character').onclick=()=>{characterUpload=null;$('character-file').click();};
 $('character-file').onchange=async e=>{
   const file=e.target.files[0];if(!file)return;const owner=project,upload=characterUpload,existing=upload?.character;

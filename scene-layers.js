@@ -2,7 +2,7 @@
 (function installSceneLayers(root){
   'use strict';
   const imageValid=s=>typeof s==='string'&&/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(s);
-  function pictures(character){return [{id:'default',name:'Основная',image:character.image},...(character.images||[])];}
+  function pictures(character){return [{id:'default',name:character.imageName||'Основная',image:character.image},...(character.images||[])];}
   function picture(character,id='default'){return pictures(character).find(p=>p.id===id);}
   function validate(project){
     const characters=project.characters||[];
@@ -67,7 +67,7 @@
             artwork.append(background,placements);actors(placements,node,quest.characters||[]);panel.append(artwork);
             background.onerror=()=>{artwork.hidden=true;};
           }
-          const text=document.createElement('p');text.className='conversation-text';text.textContent=node.text;panel.append(text);
+          const text=document.createElement('p');text.className='conversation-text';text.textContent=node.text;if(root.QuestAtlas)root.QuestAtlas.renderText(text,node.text,quest);panel.append(text);
           if(message){const result=document.createElement('p');result.textContent=message;result.setAttribute('role','status');panel.append(result);}
           for(const choice of node.choices){
             const availability=root.QuestRules.transition(choice,quest.variables||[],getState());

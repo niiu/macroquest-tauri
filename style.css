@@ -69,3 +69,4 @@ body.sidebar-collapsed .graph-section{grid-column:1;grid-row:1}
 .edge-label.dialogue-edge{border-color:#8ecbd8;color:#bce8ef;background:#20353a}
 
 .conversation-art{position:relative;line-height:0;margin:16px 0}.conversation-art>.conversation-background{display:block;width:100%;height:auto;border-radius:6px}.conversation-art .actor-layer{overflow:hidden}
+.character-card{touch-action:none;user-select:none}.character-card input,.character-card textarea{user-select:text}.character-dragging{opacity:.6}.character-drag-preview{position:fixed!important;width:80px!important;height:110px!important;object-fit:contain;transform:translate(-50%,-100%);pointer-events:none!important;z-index:1000;opacity:.8;filter:drop-shadow(0 3px 5px #0009)}.character-drop-target{outline:3px solid var(--accent);outline-offset:-3px}

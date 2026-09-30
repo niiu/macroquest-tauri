@@ -14,6 +14,16 @@ function validate(p){
   if(ids.size!==p.scenes.length || !ids.has(p.start)) throw Error('Проверьте идентификаторы и начальную сцену.');
   QuestRules.validateVariables(p.variables||[]);
   QuestLayers.validate(p);
+  if(p.graphicMode!==undefined&&typeof p.graphicMode!=='boolean')throw Error('Некорректная настройка графического режима.');
+  if(p.atlasLinks!==undefined&&typeof p.atlasLinks!=='boolean')throw Error('Некорректная настройка ссылок атласа.');
+  if(p.atlasEntries!==undefined){
+    if(!Array.isArray(p.atlasEntries)||p.atlasEntries.length>10000)throw Error('Некорректные описания атласа.');
+    const refs=new Set();
+    for(const a of p.atlasEntries){
+      if(!a||typeof a.id!=='string'||!a.id||refs.has(a.id)||typeof a.title!=='string'||!a.title.trim()||a.title.length>100||typeof a.summary!=='string'||a.summary.length>2000||!Array.isArray(a.aliases)||a.aliases.length>30||a.aliases.some(n=>typeof n!=='string'||!n.trim()||n.length>100))throw Error('Некорректное краткое описание атласа.');
+      refs.add(a.id);
+    }
+  }
   if(p.graphSize!==undefined&&!QuestGraphArea.valid(p.graphSize))throw Error('Некорректный размер поля графа.');
   for(const s of p.scenes){
     if(typeof s.id!=='string'||typeof s.title!=='string'||typeof s.text!=='string'||!Number.isFinite(s.x)||!Number.isFinite(s.y)||s.x<0||s.y<0||s.x>100000||s.y>100000||!Array.isArray(s.choices)||s.choices.some(c=>!c||typeof c.text!=='string'||!ids.has(c.target))) throw Error('В квесте есть повреждённая сцена или переход.');
@@ -29,21 +39,27 @@ let playerState={};
 let previewSaves=null;
 let saveRevision=0,saveQueue=Promise.resolve(),pendingSaves=0,saveFailed=false;
 const scene=()=>project.scenes.find(s=>s.id===selected);
+let saveTimer=null;
 function save(){
+  clearTimeout(saveTimer);$('save-status').textContent='Сохранение…';
+  saveTimer=setTimeout(()=>{saveTimer=null;writeProject();},350);
+}
+function writeProject(){
   const revision=++saveRevision,snapshot=structuredClone(project);
   pendingSaves++;$('save-status').textContent='Сохранение…';
   saveQueue=saveQueue.then(async()=>{
-    try{await QuestStorage.write(snapshot);saveFailed=false;if(revision===saveRevision)$('save-status').textContent='Сохранено на устройстве';}
+    try{await persistQuest(snapshot);saveFailed=false;if(revision===saveRevision)$('save-status').textContent='Сохранено на устройстве';}
     catch(e){saveFailed=true;$('save-status').textContent='Не удалось сохранить — экспортируйте JSON';}
     finally{pendingSaves--;}
   });
 }
-window.addEventListener('beforeunload',e=>{if(pendingSaves||saveFailed){e.preventDefault();e.returnValue='';}});
+async function flushProject(){if(saveTimer){clearTimeout(saveTimer);saveTimer=null;writeProject();}await saveQueue;}
+window.addEventListener('beforeunload',e=>{if(saveTimer||pendingSaves||saveFailed){e.preventDefault();e.returnValue='';}});
 function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
 function setEditorOpen(open){$('editor-body').hidden=!open;$('collapse-editor').textContent=open?'Свернуть ↓':'Открыть редактор ↑';$('collapse-editor').setAttribute('aria-expanded',String(open));}
 $('collapse-editor').onclick=()=>setEditorOpen($('editor-body').hidden);
 function select(id){$('next-new-location').checked=false;selected=id;activeChoice=0;setEditorOpen(true);renderGraph();renderInspector();openSceneEditor();}
-function renderInspector(){const s=scene();$('scene-dialogue').checked=!!s.dialogue;$('scene-dialogue').disabled=project.scenes.some(n=>n.actors?.some(p=>p.dialogue===s.id));$('scene-heading').textContent=s.title||'Сцена без названия';$('scene-id').textContent=s.dialogue?'ДИАЛОГ':s.id===project.start?'НАЧАЛО':'СЦЕНА';$('scene-title').value=s.title;$('scene-text').value=s.text;$('set-start').disabled=s.id===project.start;$('delete-scene').disabled=project.scenes.length===1;renderChoices();renderImageEditor();renderCharacters();renderDialogueEditor();}
+function renderInspector(){const s=scene();$('scene-dialogue').checked=!!s.dialogue;$('scene-dialogue').disabled=project.scenes.some(n=>n.actors?.some(p=>p.dialogue===s.id));$('scene-heading').textContent=s.title||'Сцена без названия';$('scene-id').textContent=s.dialogue?'ДИАЛОГ':s.id===project.start?'НАЧАЛО':'СЦЕНА';$('scene-title').value=s.title;$('scene-text').value=s.text;$('set-start').disabled=s.id===project.start;$('delete-scene').disabled=project.scenes.length===1;renderChoices();renderImageEditor();renderCharacters();renderDialogueEditor();if(typeof renderAtlasTextPreview==='function')renderAtlasTextPreview();if(typeof updateGraphicMode==='function')updateGraphicMode();}
 function renderChoices(){
   const s=scene();activeChoice=Math.max(0,Math.min(activeChoice,s.choices.length-1));$('choices').replaceChildren();
   s.choices.forEach((c,i)=>{
@@ -65,7 +81,7 @@ function render(){cancelConnection();$('quest-title').value=project.title;docume
 $('quest-title').oninput=e=>{project.title=e.target.value;document.querySelector('.project-name').textContent=project.title+' / Редактор';save();};
 $('scene-title').oninput=e=>{scene().title=e.target.value;$('scene-heading').textContent=scene().title||'Сцена без названия';save();renderGraph();renderChoices();};
 $('scene-dialogue').onchange=e=>{scene().dialogue=e.target.checked;save();renderGraph();renderInspector();};
-$('scene-text').oninput=e=>{scene().text=e.target.value;save();renderGraph();};
+$('scene-text').oninput=e=>{scene().text=e.target.value;save();renderGraph();renderAtlasTextPreview();if(typeof updateGraphicMode==='function')updateGraphicMode();};
 $('add-scene').onclick=()=>{if(project.scenes.length>=500)return alert('Максимум 500 сцен в одном квесте.');const viewport=$('graph-viewport'),position=QuestGraphArea.position(QuestGraphArea.bounds(project,nodeHeight),(viewport.scrollLeft+viewport.clientWidth/2)/zoom-110,(viewport.scrollTop+viewport.clientHeight/2)/zoom-77);const s={id:'s'+crypto.randomUUID(),title:'Новая сцена',text:'',...position,choices:[]};project.scenes.push(s);save();setSceneTab('text');select(s.id);$('scene-title').focus({preventScroll:true});};
 $('add-choice').onclick=()=>openPathEditor(scene(),null,project.scenes.find(s=>s.id!==selected)?.id||selected);
 $('set-start').onclick=()=>{project.start=selected;save();render();};
@@ -96,7 +112,7 @@ function renderPlayerChoices(){
   else if(s.choices.length&&!s.choices.some(choiceAllowed))$('play-choices').append(el('p','hint','Нет доступных путей. Проверьте состояние персонажа или начните сначала.'));
 }
 let disposeConversation=()=>{};
-function renderPlayer(){disposeConversation();$('play-roll').textContent='';delete $('play-image-wrap').dataset.failed;const s=project.scenes.find(s=>s.id===playing);$('play-title').textContent=s.title;$('play-text').textContent=s.text||'Текст этой сцены ещё не написан.';renderPlayerChoices();renderPlayerState();renderPlayerImage(s);disposeConversation=QuestLayers.conversations($('play-actors'),s,project,{getState:()=>playerState,apply:state=>{playerState=state;previewSaves?.autosave();},travel:(id,message)=>{playing=id;renderPlayer();$('play-roll').textContent=message;previewSaves?.autosave();},refresh:renderPlayer,autoHost:$('play-choices')});$('play-text').hidden=!!s.dialogue;}
+function renderPlayer(){disposeConversation();$('play-roll').textContent='';delete $('play-image-wrap').dataset.failed;const s=project.scenes.find(s=>s.id===playing);$('play-title').textContent=s.title;QuestAtlas.renderText($('play-text'),s.text||'Текст этой сцены ещё не написан.',project);renderPlayerChoices();renderPlayerState();renderPlayerImage(s);disposeConversation=QuestLayers.conversations($('play-actors'),s,project,{getState:()=>playerState,apply:state=>{playerState=state;previewSaves?.autosave();},travel:(id,message)=>{playing=id;renderPlayer();$('play-roll').textContent=message;previewSaves?.autosave();},refresh:renderPlayer,autoHost:$('play-choices')});$('play-text').hidden=!!s.dialogue;}
 function startPlayer(){
   previewSaves?.dispose();playing=project.start;playerState=QuestRules.initialState(project.variables||[]);renderPlayer();
   previewSaves=QuestSaves.attach({host:$('preview-saves'),quest:project,namespace:'preview',getState:()=>({scene:playing,state:playerState}),onLoad:saved=>{playing=saved.scene;playerState=saved.state;renderPlayer();$('player').scrollTop=0;}});
