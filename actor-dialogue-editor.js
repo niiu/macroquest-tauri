@@ -44,7 +44,7 @@ new ResizeObserver(positionActorBadges).observe($('image-surface'));
 function renderActorAnswerBadges(img,owner,placement){
   for(const image of actorBadgePositions.keys())if(!image.isConnected)actorBadgePositions.delete(image);
   const reply=QuestActorDialogue.resolve(project,owner,placement);
-  if(!project.graphicMode||!reply?.choices.length)return ()=>{};
+  if(!reply?.choices.length)return ()=>{};
   const group=el('div','actor-answer-badges');group.setAttribute('aria-label','Ответы персонажа: '+img.alt);
   reply.choices.forEach((choice,i)=>{
     const button=el('button','actor-answer-badge',String(i+1));button.type='button';button.title=choice.text;
