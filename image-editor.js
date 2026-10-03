@@ -1,5 +1,6 @@
 'use strict';
 let imageReady=false,strokeSession=null,paintFrame=0,playerImageReady=false;
+const rectangleTool=el('button','','Рамка');rectangleTool.id='rectangle-tool';rectangleTool.setAttribute('aria-pressed','false');$('eraser-tool').after(rectangleTool);
 
 function syncZoneTools(){
   const s=scene(),choice=s.choices[activeChoice],select=$('zone-choice');
@@ -8,15 +9,17 @@ function syncZoneTools(){
   if(!s.choices.length){const option=el('option','','Сначала добавьте действие');select.append(option);}
   select.value=String(activeChoice);select.disabled=!s.choices.length;
   const enabled=!!(imageReady&&choice);
-  for(const id of ['brush-tool','eraser-tool','brush-size'])$(id).disabled=!enabled;
+  for(const id of ['brush-tool','eraser-tool','rectangle-tool','brush-size'])$(id).disabled=!enabled;
+  $('brush-size').disabled=!enabled||paintTool==='rect';
   $('undo-zone').disabled=!enabled||!choice.zone?.length;
   $('clear-zone').disabled=!enabled||!choice.zone?.length;
   $('upload-image').disabled=false;
   $('remove-image').disabled=!s.image;
   $('brush-tool').setAttribute('aria-pressed',String(paintTool==='paint'));
   $('eraser-tool').setAttribute('aria-pressed',String(paintTool==='erase'));
-  $('zone-canvas').style.cursor=enabled?'none':'default';
-  $('zone-status').textContent=!s.image?'Загрузите изображение, чтобы рисовать зоны.':!imageReady?'Изображение загружается…':!choice?'Добавьте действие под изображением, затем закрасьте его зону.':`${paintTool==='paint'?'Кисть':'Ластик'} · ${choice.text||'Без названия'} · ${choice.zone?.length||0} штрихов. Ластик действует только на выбранную зону.`;
+  rectangleTool.setAttribute('aria-pressed',String(paintTool==='rect'));
+  $('zone-canvas').style.cursor=enabled?(paintTool==='rect'?'crosshair':'none'):'default';
+  $('zone-status').textContent=!s.image?'Загрузите изображение, чтобы рисовать зоны.':!imageReady?'Изображение загружается…':!choice?'Добавьте действие под изображением, затем нарисуйте его зону.':`${({paint:'Кисть',erase:'Ластик',rect:'Рамка'})[paintTool]} · ${choice.text||'Без названия'} · ${choice.zone?.length||0} штрихов. ${paintTool==='rect'?'Протяните прямоугольник. Escape — отмена.':'Ластик действует только на выбранную зону.'}`;
 }
 function paintZones(){
   const canvas=$('zone-canvas');
@@ -44,6 +47,7 @@ function chooseTool(tool){
   $('show-zones').checked=true;syncZoneTools();paintZones();
 }
 $('brush-tool').onclick=()=>chooseTool('paint');$('eraser-tool').onclick=()=>chooseTool('erase');
+rectangleTool.onclick=()=>chooseTool('rect');
 $('brush-size').oninput=e=>{$('brush-size-label').textContent=e.target.value+' px';};
 $('show-zones').onchange=paintZones;
 $('undo-zone').onclick=()=>{const c=scene().choices[activeChoice];if(c?.zone?.length){c.zone.pop();save();syncZoneTools();paintZones();}};
@@ -51,7 +55,7 @@ $('clear-zone').onclick=()=>{const c=scene().choices[activeChoice];if(c?.zone?.l
 function pointerPoint(e,canvas){const r=canvas.getBoundingClientRect();return [Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),Math.max(0,Math.min(1,(e.clientY-r.top)/r.height))];}
 function moveCursor(e){
   const r=$('zone-canvas').getBoundingClientRect(),cursor=$('brush-cursor');
-  cursor.hidden=!imageReady||!scene().choices[activeChoice]||e.pointerType==='touch';
+  cursor.hidden=paintTool==='rect'||!imageReady||!scene().choices[activeChoice]||e.pointerType==='touch';
   const size=Number($('brush-size').value);
   cursor.style.width=cursor.style.height=size+'px';cursor.style.left=(e.clientX-r.left)+'px';cursor.style.top=(e.clientY-r.top)+'px';
   cursor.style.borderColor=paintTool==='erase'?'#fff':QuestZones.color(activeChoice);cursor.classList.toggle('erasing',paintTool==='erase');
@@ -64,6 +68,7 @@ $('zone-canvas').onpointerdown=e=>{
   e.preventDefault();$('show-zones').checked=true;
   const r=e.currentTarget.getBoundingClientRect();
   const stroke={mode:paintTool,radius:Math.min(1,Number($('brush-size').value)/(2*Math.min(r.width,r.height))),points:[pointerPoint(e,e.currentTarget)]};
+  if(paintTool==='rect'){stroke.mode='paint';stroke.shape='rect';stroke.points.push([...stroke.points[0]]);}
   choice.zone.push(stroke);strokeSession={choice,stroke,pointerId:e.pointerId};
   e.currentTarget.setPointerCapture(e.pointerId);moveCursor(e);paintZones();
 };
@@ -71,17 +76,20 @@ $('zone-canvas').onpointermove=e=>{
   moveCursor(e);
   if(!strokeSession||e.pointerId!==strokeSession.pointerId)return;
   const points=strokeSession.stroke.points,p=pointerPoint(e,e.currentTarget),previous=points[points.length-1];
-  if(points.length<20000&&Math.hypot(p[0]-previous[0],p[1]-previous[1])>.0005)points.push(p);
+  if(strokeSession.stroke.shape==='rect')points[1]=p;
+  else if(points.length<20000&&Math.hypot(p[0]-previous[0],p[1]-previous[1])>.0005)points.push(p);
   if(!paintFrame)paintFrame=requestAnimationFrame(()=>{paintFrame=0;paintZones();});
 };
 function finishStroke(commit){
   if(!strokeSession)return;
   const session=strokeSession;strokeSession=null;
+  if(session.stroke.shape==='rect'){const [a,b]=session.stroke.points;if(a[0]===b[0]||a[1]===b[1])commit=false;}
   if(!commit)session.choice.zone.pop();
   if($('zone-canvas').hasPointerCapture(session.pointerId))$('zone-canvas').releasePointerCapture(session.pointerId);
   if(commit)save();syncZoneTools();paintZones();
 }
-$('zone-canvas').onpointerup=e=>{if(strokeSession?.pointerId===e.pointerId)finishStroke(true);};
+$('zone-canvas').onpointerup=e=>{if(strokeSession?.pointerId===e.pointerId){if(strokeSession.stroke.shape==='rect')strokeSession.stroke.points[1]=pointerPoint(e,e.currentTarget);finishStroke(true);}};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&strokeSession){e.preventDefault();e.stopImmediatePropagation();finishStroke(false);}},true);
 $('zone-canvas').onpointercancel=()=>finishStroke(false);
 $('zone-canvas').onlostpointercapture=()=>finishStroke(false);
 $('zone-canvas').onpointerleave=()=>{$('brush-cursor').hidden=true;};
