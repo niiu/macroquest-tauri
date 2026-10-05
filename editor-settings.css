@@ -1,0 +1,19 @@
+:root{--font-base:14px;--font-medium:17px;--font-large:20px;--surface:#20271f;--input:#161a16;--hover:#364131;--muted:#929b8c}
+:root[data-editor-theme=night]{--bg:#141923;--panel:#1c2432;--line:#3a4b63;--text:#e1e9f6;--muted:#a3b3ca;--accent:#9ecafa;--surface:#253246;--input:#141c29;--hover:#344d69}
+:root[data-editor-theme=plum]{--bg:#211922;--panel:#2c2130;--line:#59415e;--text:#f1e2ed;--muted:#c0a6bb;--accent:#e0add2;--surface:#38283d;--input:#241b29;--hover:#563c59}
+body,button,input,select,textarea,label,p,small,.field,.hint,.eyebrow,.mono,.scene-item,.node p,.node-count,.node-top,.graph-toolbar,.canvas-footer,.project-name,.choice label,.choice input,.choice select,.choice button,.quiet,.badge,.scene-item small{font-size:var(--font-base)!important}
+h2,h3,.node h3,.settings-workspace h3{font-size:var(--font-medium)!important}
+h1,.atlas-sidebar h1,.settings-workspace h1{font-size:var(--font-large)!important}
+.settings-workspace{max-width:900px;padding:30px;margin:auto}.settings-workspace fieldset{border:1px solid var(--line);padding:22px;margin:20px 0;border-radius:8px}.settings-workspace .field{max-width:350px}.settings-workspace .toggle{display:block;margin:14px 0}.settings-workspace select{width:100%;padding:10px}.font-preview{padding:16px;border:1px solid var(--line);border-radius:6px}.settings-workspace #font-preview-base{font-size:var(--font-base)!important}
+body,.workspace,.graph-section,.atlas-content{background:var(--bg);color:var(--text)}
+.topbar,.sidebar,.inspector,.workspace-tabs,.atlas-sidebar,dialog,.toastui-editor-defaultUI,.toastui-editor-defaultUI-toolbar{background:var(--panel)!important;color:var(--text);border-color:var(--line)!important}
+button,.node,.choice,.chapter-card,.graphic-fold,.atlas-text-preview,.toastui-editor-contents{background-color:var(--surface);color:var(--text);border-color:var(--line)}
+input,textarea,select,.field input,.field textarea,.choice input,.choice select,.toastui-editor-md-container,.toastui-editor-ww-container{background:var(--input)!important;color:var(--text)!important;border-color:var(--line)!important}
+button:hover,.scene-item.active,.workspace-tabs button[aria-pressed=true]{background:var(--hover);color:var(--accent)}
+.primary{background:var(--accent);color:var(--bg)}.hint,.field,.eyebrow,.node p,.scene-item small,.canvas-heading p{color:var(--muted)}
+.node.selected,.chapter-card,.chapter-frame{border-color:var(--accent)}
+.toastui-editor-contents p,.toastui-editor-contents li,.toastui-editor-md-container,.toastui-editor-ww-container{font-size:var(--font-base)!important;color:var(--text)!important}
+.graph-toolbar{flex-wrap:wrap;gap:8px}.scene-item,.sidebar-chapter-toggle{overflow-wrap:anywhere}.node h3{line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.node-card,.node-card:hover{background:transparent;color:var(--text)}.node-top{white-space:nowrap;overflow:hidden}.node-count{white-space:nowrap}.chapter-toggle,.sidebar-chapter-toggle{color:var(--accent)}
+.scene-item .number{flex-shrink:0;white-space:nowrap}.scene-item>span:last-child{min-width:0}.brand small{font-size:8px!important}
+.toastui-editor-contents h1{font-size:var(--font-large)!important}.toastui-editor-contents h2,.toastui-editor-contents h3{font-size:var(--font-medium)!important}

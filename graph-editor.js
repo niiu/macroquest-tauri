@@ -41,7 +41,7 @@ function disconnectDialogue(source,actor){
   lastDisconnected={project,source,actor,target:actor.dialogue};delete actor.dialogue;
   save();renderGraph();renderInspector();$('graph-status').textContent='Связь с диалогом отключена. Персонаж остаётся на сцене.';
 }
-function nodeHeight(s){return Math.max(154,96+(incomingPaths(s.id).length-1)*28);}
+function nodeHeight(s){return Math.max(typeof editorNodeHeight==='function'?editorNodeHeight():154,96+(incomingPaths(s.id).length-1)*28);}
 function disconnectPath(source,choice){
   const index=source.choices.indexOf(choice);if(index<0)return;
   lastDisconnected={project,source,choice,index};source.choices.splice(index,1);

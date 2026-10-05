@@ -70,9 +70,10 @@ const integration=el('section','atlas-integration');integration.innerHTML=`<h3>Ð
 $('editor-body').prepend(integration);
 function showWorkspace(tab){
   if(!libraryReady)return;
-  if(tab==='atlas')closeSceneEditor();
-  document.querySelector('.workspace').hidden=tab==='atlas';atlasPanel.hidden=tab!=='atlas';editorTab.setAttribute('aria-pressed',String(tab==='editor'));atlasTab.setAttribute('aria-pressed',String(tab==='atlas'));
-  if(tab==='editor'){render();renderAtlasOptions();}else renderAtlasTree();
+  if(tab!=='editor')closeSceneEditor();
+  document.querySelector('.workspace').hidden=tab!=='editor';atlasPanel.hidden=tab!=='atlas';editorTab.setAttribute('aria-pressed',String(tab==='editor'));atlasTab.setAttribute('aria-pressed',String(tab==='atlas'));
+  if(typeof settingsPanel!=='undefined'){settingsPanel.hidden=tab!=='settings';settingsTab.setAttribute('aria-pressed',String(tab==='settings'));}
+  if(tab==='editor'){render();renderAtlasOptions();}else if(tab==='atlas')renderAtlasTree();
 }
 function ensureAtlasEditor(){
   if(atlasEditor)return;
