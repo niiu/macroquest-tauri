@@ -1,6 +1,6 @@
 {
   "name": "macroquest-editor",
-  "version": "0.2.20",
+  "version": "0.2.21",
   "private": true,
   "overrides": {
     "dompurify": "^3.4.13"
@@ -8,7 +8,7 @@
   "description": "Редактор графических квестов с автономным HTML-экспортом",
   "scripts": {
     "start": "node dev-server.cjs",
-    "test": "node --test graph-area.test.cjs rules.test.cjs validate.test.cjs saves.test.cjs html-export.test.cjs scene-features.test.cjs character-library.test.cjs atlas.test.cjs workspace.test.cjs interaction.test.cjs graphic-mode.test.cjs chapters.test.cjs graph-selection.test.cjs zones-rectangle.test.cjs editor-settings.test.cjs",
+    "test": "node --test graph-area.test.cjs rules.test.cjs validate.test.cjs saves.test.cjs html-export.test.cjs scene-features.test.cjs character-library.test.cjs atlas.test.cjs workspace.test.cjs interaction.test.cjs graphic-mode.test.cjs chapters.test.cjs graph-selection.test.cjs zones-rectangle.test.cjs editor-settings.test.cjs service-nodes.test.cjs",
     "build:windows": "tauri build",
     "test:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File packaging/windows/smoke-test.ps1",
     "postinstall": "node prepare-vendor.cjs",

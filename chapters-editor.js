@@ -16,7 +16,7 @@ function renderChapterForm(){
   for(const c of project.chapters||[]){const o=el('option','',c.title);o.value=c.id;$('chapter-picker').append(o);}$('chapter-picker').value=editingChapter||'';
   $('chapter-title').value=chapter?.title||'';$('chapter-delete').disabled=!chapter;$('chapter-delete').textContent='Убрать главу';$('chapter-error').textContent='';
   $('chapter-members').replaceChildren();
-  for(const s of project.scenes){const row=el('label','chapter-member'),box=el('input');box.type='checkbox';box.value=s.id;box.checked=!!chapter&&s.chapter===chapter.id;row.append(box,el('span','',s.title||'Без названия'));const current=project.chapters?.find(c=>c.id===s.chapter);if(current)row.append(el('small','hint',current.title));$('chapter-members').append(row);}
+  for(const s of QuestService.playable(project)){const row=el('label','chapter-member'),box=el('input');box.type='checkbox';box.value=s.id;box.checked=!!chapter&&s.chapter===chapter.id;row.append(box,el('span','',s.title||'Без названия'));const current=project.chapters?.find(c=>c.id===s.chapter);if(current)row.append(el('small','hint',current.title));$('chapter-members').append(row);}
 }
 chaptersButton.onclick=()=>openChapters(project.chapters?.[0]?.id);$('close-chapters').onclick=()=>chapterDialog.close();
 $('chapter-picker').onchange=e=>{editingChapter=e.target.value;renderChapterForm();};$('chapter-new').onclick=()=>{editingChapter=null;renderChapterForm();$('chapter-title').focus();};

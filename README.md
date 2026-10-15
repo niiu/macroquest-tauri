@@ -6,7 +6,11 @@
 
 Установка зависимостей: `npm ci`. Браузер: `npm start`. Настольный режим: `npm run desktop`. Windows-установщик: `npm run build:windows`. Проверки: `npm test` и `cargo test --manifest-path src-tauri/Cargo.toml`. Для сборки нужны Node.js, Rust 1.90 (зафиксирован в `rust-toolchain.toml`), Microsoft C++ Build Tools и WebView2. Пользователю собранного приложения Node.js и Rust не нужны.
 
-Сборка выпускает `src-tauri/target/release/macroquest.exe` и `src-tauri/target/release/bundle/nsis/Macroquest_0.2.20_x64-setup.exe`. Ресурсы визуального редактора собираются локально, приложение не зависит от CDN. Конфигурация оболочки соответствует [документации Tauri 2](https://v2.tauri.app/reference/config/). Отдельные сборки 0.2.1–0.2.20, исходники и журналы проверок находятся в `dist/releases/`. Изменения перечислены в [CHANGELOG.md](CHANGELOG.md).
+Сборка выпускает `src-tauri/target/release/macroquest.exe` и `src-tauri/target/release/bundle/nsis/Macroquest_0.2.21_x64-setup.exe`. Ресурсы визуального редактора собираются локально, приложение не зависит от CDN. Конфигурация оболочки соответствует [документации Tauri 2](https://v2.tauri.app/reference/config/). Отдельные сборки 0.2.1–0.2.21, исходники и журналы проверок находятся в `dist/releases/`. Изменения перечислены в [CHANGELOG.md](CHANGELOG.md).
+
+### Заметки на графе (0.2.21)
+
+Кнопка «+ Заметка» создаёт служебную ноду только с выходным портом. Протяните выход к обычной сцене, чтобы привязать заметку. Текст редактируется двойным кликом по ноде или из блока «Заметки сцены» в редакторе (WYSIWYG как в атласе). Заметки не участвуют в прохождении и не попадают в HTML.
 
 В настольной версии консоль открывается кнопкой «Консоль», F12 или Ctrl+Shift+I.
 

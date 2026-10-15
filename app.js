@@ -15,6 +15,7 @@ function validate(p){
   QuestRules.validateVariables(p.variables||[]);
   QuestLayers.validate(p);
   if(typeof QuestChapters!=='undefined')QuestChapters.validate(p);
+  if(typeof QuestService!=='undefined')QuestService.validate(p);
   if(p.graphicMode!==undefined&&typeof p.graphicMode!=='boolean')throw Error('Некорректная настройка графического режима.');
   if(p.atlasLinks!==undefined&&typeof p.atlasLinks!=='boolean')throw Error('Некорректная настройка ссылок атласа.');
   if(p.atlasEntries!==undefined){
@@ -28,6 +29,7 @@ function validate(p){
   if(p.graphSize!==undefined&&!QuestGraphArea.valid(p.graphSize))throw Error('Некорректный размер поля графа.');
   for(const s of p.scenes){
     if(typeof s.id!=='string'||typeof s.title!=='string'||typeof s.text!=='string'||!Number.isFinite(s.x)||!Number.isFinite(s.y)||s.x<0||s.y<0||s.x>100000||s.y>100000||!Array.isArray(s.choices)||s.choices.some(c=>!c||typeof c.text!=='string'||!ids.has(c.target))) throw Error('В квесте есть повреждённая сцена или переход.');
+    if(QuestService.isService(s))continue;
     if(s.image !== undefined && (typeof s.image !== 'string' || !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(s.image))) throw Error('Изображение должно быть встроенным PNG, JPEG или WebP.');
     if(s.choices.some(c=>c.zone!==undefined && !QuestZones.validStrokes(c.zone))) throw Error('Некорректная зона действия.');
     s.choices.forEach(c=>{QuestRules.validateChoice(c,p.variables||[]);if(c.check&&[...c.check.targets,c.check.failureTarget].some(t=>t&&!ids.has(t)))throw Error('Выход D20 ссылается на отсутствующую сцену.');});
@@ -59,8 +61,13 @@ window.addEventListener('beforeunload',e=>{if(saveTimer||pendingSaves||saveFaile
 function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
 function setEditorOpen(open){$('editor-body').hidden=!open;$('collapse-editor').textContent=open?'Свернуть ↓':'Открыть редактор ↑';$('collapse-editor').setAttribute('aria-expanded',String(open));}
 $('collapse-editor').onclick=()=>setEditorOpen($('editor-body').hidden);
-function select(id){const chapter=project.chapters?.find(c=>c.id===project.scenes.find(s=>s.id===id)?.chapter);if(chapter?.collapsed){chapter.collapsed=false;save();}$('next-new-location').checked=false;selected=id;activeChoice=0;setEditorOpen(true);renderGraph();renderInspector();openSceneEditor();}
-function renderInspector(){const s=scene();if(typeof renderChapterSelect==='function')renderChapterSelect();$('scene-dialogue').checked=!!s.dialogue;$('scene-dialogue').disabled=project.scenes.some(n=>n.actors?.some(p=>p.dialogue===s.id));$('scene-heading').textContent=s.title||'Сцена без названия';$('scene-id').textContent=s.dialogue?'ДИАЛОГ':s.id===project.start?'НАЧАЛО':'СЦЕНА';$('scene-title').value=s.title;$('scene-text').value=s.text;$('set-start').disabled=s.id===project.start;$('delete-scene').disabled=project.scenes.length===1;renderChoices();renderImageEditor();renderCharacters();renderDialogueEditor();if(typeof renderAtlasTextPreview==='function')renderAtlasTextPreview();if(typeof updateGraphicMode==='function')updateGraphicMode();}
+function select(id){
+  const next=project.scenes.find(s=>s.id===id);if(!next)return;
+  if(QuestService.isNote(next)){selected=id;renderGraph();openNoteEditor(id);return;}
+  const chapter=project.chapters?.find(c=>c.id===next.chapter);if(chapter?.collapsed){chapter.collapsed=false;save();}
+  $('next-new-location').checked=false;selected=id;activeChoice=0;setEditorOpen(true);renderGraph();renderInspector();openSceneEditor();
+}
+function renderInspector(){const s=scene();if(!s||QuestService.isNote(s))return;if(typeof renderChapterSelect==='function')renderChapterSelect();$('scene-dialogue').checked=!!s.dialogue;$('scene-dialogue').disabled=project.scenes.some(n=>n.actors?.some(p=>p.dialogue===s.id));$('scene-heading').textContent=s.title||'Сцена без названия';$('scene-id').textContent=s.dialogue?'ДИАЛОГ':s.id===project.start?'НАЧАЛО':'СЦЕНА';$('scene-title').value=s.title;$('scene-text').value=s.text;$('set-start').disabled=s.id===project.start;$('delete-scene').disabled=QuestService.playable(project).length===1;renderChoices();renderImageEditor();renderCharacters();renderDialogueEditor();if(typeof renderSceneNotes==='function')renderSceneNotes();if(typeof renderAtlasTextPreview==='function')renderAtlasTextPreview();if(typeof updateGraphicMode==='function')updateGraphicMode();}
 function renderChoices(){
   const s=scene();activeChoice=Math.max(0,Math.min(activeChoice,s.choices.length-1));$('choices').replaceChildren();
   s.choices.forEach((c,i)=>{
@@ -68,7 +75,7 @@ function renderChoices(){
     const caption=el('div','choice-caption');caption.append(el('span','zone-dot'),el('strong','',`${s.dialogue?'Ответ':'Действие'} ${i+1}`));
     const input=el('input');input.value=c.text;input.placeholder='Например: открыть дверь';input.setAttribute('aria-label','Текст действия '+(i+1));input.oninput=()=>{c.text=input.value;save();syncZoneTools();drawEdges();};
     const label=el('label','',s.dialogue?'СЛЕДУЮЩАЯ РЕПЛИКА ИЛИ СЦЕНА':'ПЕРЕХОД В СЦЕНУ');const target=el('select');target.setAttribute('aria-label','Цель действия '+(i+1));
-    project.scenes.forEach(t=>{const o=el('option','',t.title||'Без названия');o.value=t.id;target.append(o);});target.value=c.target;target.onchange=()=>{c.target=target.value;save();renderGraph();};
+    QuestService.playable(project).forEach(t=>{const o=el('option','',t.title||'Без названия');o.value=t.id;target.append(o);});target.value=c.target;target.onchange=()=>{c.target=target.value;save();renderGraph();};
     const controls=el('div','choice-controls');const paint=el('button','','Нарисовать зону');paint.onclick=()=>{activeChoice=i;renderChoices();setSceneTab('image');paintZones();};
     const conditions=el('button','','Условия и последствия');conditions.onclick=()=>openPathEditor(s,c);
     const remove=el('button','quiet','Удалить действие');remove.onclick=()=>{if(c.zone?.length&&!confirm('Удалить действие вместе с нарисованной зоной?'))return;s.choices.splice(i,1);if(activeChoice>i)activeChoice--;save();renderChoices();renderGraph();paintZones();};
@@ -83,7 +90,8 @@ $('quest-title').oninput=e=>{project.title=e.target.value;document.querySelector
 $('scene-title').oninput=e=>{scene().title=e.target.value;$('scene-heading').textContent=scene().title||'Сцена без названия';save();renderGraph();renderChoices();};
 $('scene-dialogue').onchange=e=>{scene().dialogue=e.target.checked;save();renderGraph();renderInspector();};
 $('scene-text').oninput=e=>{scene().text=e.target.value;save();renderGraph();renderAtlasTextPreview();if(typeof updateGraphicMode==='function')updateGraphicMode();};
-$('add-scene').onclick=()=>{if(project.scenes.length>=500)return alert('Максимум 500 сцен в одном квесте.');const viewport=$('graph-viewport'),position=QuestGraphArea.position(QuestGraphArea.bounds(project,nodeHeight),(viewport.scrollLeft+viewport.clientWidth/2)/zoom-110,(viewport.scrollTop+viewport.clientHeight/2)/zoom-77);const s={id:'s'+crypto.randomUUID(),title:'Новая сцена',text:'',...position,choices:[]};project.scenes.push(s);save();setSceneTab('text');select(s.id);$('scene-title').focus({preventScroll:true});};
+$('add-scene').onclick=()=>{if(project.scenes.length>=500)return alert('Максимум 500 узлов в одном квесте.');const viewport=$('graph-viewport'),position=QuestGraphArea.position(QuestGraphArea.bounds(project,nodeHeight),(viewport.scrollLeft+viewport.clientWidth/2)/zoom-110,(viewport.scrollTop+viewport.clientHeight/2)/zoom-77);const s={id:'s'+crypto.randomUUID(),title:'Новая сцена',text:'',...position,choices:[]};project.scenes.push(s);save();setSceneTab('text');select(s.id);$('scene-title').focus({preventScroll:true});};
+$('add-note').onclick=()=>{if(project.scenes.length>=500)return alert('Максимум 500 узлов в одном квесте.');const viewport=$('graph-viewport'),position=QuestGraphArea.position(QuestGraphArea.bounds(project,nodeHeight),(viewport.scrollLeft+viewport.clientWidth/2)/zoom-110,(viewport.scrollTop+viewport.clientHeight/2)/zoom-60);const note=QuestService.createNote(position);project.scenes.push(note);save();selected=note.id;renderGraph();openNoteEditor(note.id);};
 $('add-choice').onclick=()=>openPathEditor(scene(),null,project.scenes.find(s=>s.id!==selected)?.id||selected);
 $('set-start').onclick=()=>{project.start=selected;save();render();};
 $('delete-scene').onclick=()=>deleteScene(selected);

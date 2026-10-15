@@ -20,7 +20,7 @@ function finishGraphSelection(cancel=false){
 selectionGraph.addEventListener('pointerdown',e=>{
   if(e.button!==0||connectionSource)return;
   const node=e.target.closest('.node');
-  if(node&&e.shiftKey){e.preventDefault();e.stopImmediatePropagation();const id=node.dataset.sceneId;if(graphSelection.has(id))graphSelection.delete(id);else graphSelection.add(id);renderGraphSelection();return;}
+  if(node&&e.shiftKey){e.preventDefault();e.stopImmediatePropagation();const id=node.dataset.sceneId;const scene=project.scenes.find(s=>s.id===id);if(QuestService.isService(scene))return;if(graphSelection.has(id))graphSelection.delete(id);else graphSelection.add(id);renderGraphSelection();return;}
   if(e.target.closest('button,.node,.chapter-card,.edge-label,.edge-hit'))return;
   e.preventDefault();e.stopImmediatePropagation();renderGraphSelection();
   const before=new Set(graphSelection);if(!e.shiftKey)graphSelection.clear();
@@ -32,7 +32,7 @@ selectionGraph.addEventListener('pointermove',e=>{
   const p=selectionPoint(e),x=Math.min(p.x,drag.start.x),y=Math.min(p.y,drag.start.y),right=Math.max(p.x,drag.start.x),bottom=Math.max(p.y,drag.start.y);
   Object.assign(drag.box.style,{left:x+'px',top:y+'px',width:(right-x)+'px',height:(bottom-y)+'px'});
   graphSelection.clear();for(const id of drag.base)graphSelection.add(id);
-  for(const n of document.querySelectorAll('#nodes .node')){if(n.hidden)continue;const s=project.scenes.find(s=>s.id===n.dataset.sceneId);if(s&&s.x<right&&s.x+220>x&&s.y<bottom&&s.y+nodeHeight(s)>y)graphSelection.add(s.id);}
+  for(const n of document.querySelectorAll('#nodes .node')){if(n.hidden)continue;const s=project.scenes.find(s=>s.id===n.dataset.sceneId);if(s&&!QuestService.isService(s)&&s.x<right&&s.x+220>x&&s.y<bottom&&s.y+nodeHeight(s)>y)graphSelection.add(s.id);}
   renderGraphSelection();
 });
 selectionGraph.addEventListener('pointerup',e=>{if(selectionDrag?.pointer===e.pointerId)finishGraphSelection();});

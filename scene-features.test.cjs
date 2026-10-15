@@ -36,7 +36,8 @@ const zoned={...project.scenes[0],choices:[{text:'Идти',target:'mid',zone:[{
 let taken;layerAPI.paths(host,zoned,project.scenes,()=>({ok:true}),c=>{taken=c;});assert.equal(host.children[0].textContent,zoned.choices[0].text+' → mid');host.children[0].onclick();assert.equal(taken,zoned.choices[0]);
 // Exercise the actual graph operations with isolated project data.
 const graphSource=fs.readFileSync('graph-editor.js','utf8').split("const undoDisconnect=")[0];
-const graphContext={matchMedia:()=>({}),el:()=>new Element(),document:{querySelector:()=>new Element()},$:get,QuestRules:rules,project:structuredClone(project),selected:'low',save(){},render(){},renderGraph(){}};
+const QuestService=require('./service-nodes.js');
+const graphContext={matchMedia:()=>({}),el:()=>new Element(),document:{querySelector:()=>new Element()},$:get,QuestRules:rules,QuestService,project:structuredClone(project),selected:'low',save(){},render(){},renderGraph(){}};
 vm.runInNewContext(graphSource+'\nthis.removeScene=deleteScene;this.restoreScene=()=>undoScene.onclick();this.reorder=moveScene;',graphContext);
 const original=JSON.stringify(graphContext.project);graphContext.removeScene('low');assert.equal(graphContext.project.scenes.length,4);graphContext.restoreScene();assert.equal(JSON.stringify(graphContext.project),original);
 graphContext.removeScene('failure');assert.equal(graphContext.project.scenes[0].choices.length,0);graphContext.restoreScene();assert.equal(JSON.stringify(graphContext.project),original);
@@ -69,7 +70,7 @@ console.log('PASS: next reply artwork copy, isolated placements, no-background s
 
 const linkCode=fs.readFileSync('graph-editor.js','utf8').split('function pathTargets')[1].split('try{dockPreference')[0];
 const linkQuest=structuredClone(project);linkQuest.scenes.find(s=>s.id==='mid').dialogue=true;linkQuest.scenes[0].actors[0].dialogue='mid';
-const linkContext={project:linkQuest,lastDisconnected:null,undoDisconnect:{},save(){},renderGraph(){},renderInspector(){},setConnectionStatus(){},$:get,QuestRules:rules};
+const linkContext={project:linkQuest,lastDisconnected:null,undoDisconnect:{},save(){},renderGraph(){},renderInspector(){},setConnectionStatus(){},$:get,QuestRules:rules,QuestService};
 vm.runInNewContext('function pathTargets'+linkCode,linkContext);
 assert.equal(linkContext.dialogueLinks(linkQuest.scenes[0]).length,1);
 assert.equal(linkContext.incomingPaths('mid').filter(p=>p.actor).length,1);
@@ -86,7 +87,7 @@ graphFull.slice(graphFull.indexOf('function beginConnection('),graphFull.indexOf
 let hitElement={id:'graph',closest(){return null;}},openedPath=null,idCounter=0;
 const dragQuest=structuredClone(project);dragQuest.graphSize={width:3000,height:2000};dragQuest.scenes[0].dialogue=true;dragQuest.scenes[0].speaker='Путник';
 const dragContext={project:dragQuest,selected:'low',activeChoice:0,zoom:.5,connectionSource:null,connectionPointer:null,connectionFrame:0,
-  crypto:{randomUUID:()=>String(++idCounter)},QuestGraphArea:require('./graph-area.js'),QuestLayers:layers,nodeHeight:()=>154,
+  crypto:{randomUUID:()=>String(++idCounter)},QuestGraphArea:require('./graph-area.js'),QuestLayers:layers,QuestService,nodeHeight:()=>154,
   $:id=>id==='graph'?{getBoundingClientRect:()=>({left:100,top:50})}:get(id),
   document:{elementFromPoint:()=>hitElement},cancelAnimationFrame(){},connectionLine(){},autoPanConnection(){},setConnectionStatus(){},
   save(){},renderGraph(){},renderInspector(){},openPathEditor:(...args)=>{openedPath=args;},

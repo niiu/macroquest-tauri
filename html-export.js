@@ -5,6 +5,7 @@
   const atlas=typeof module!=='undefined'?require('./atlas.js'):root.QuestAtlas;
   const layers=typeof module!=='undefined'?require('./scene-layers.js'):root.QuestLayers;
   const saves=typeof module!=='undefined'?require('./saves.js'):root.QuestSaves;
+  const service=typeof module!=='undefined'?require('./service-nodes.js'):root.QuestService;
   const escapeHTML=text=>String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const safeJSON=value=>JSON.stringify(value).replace(/[<>&\u2028\u2029]/g,c=>'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'));
 
@@ -70,8 +71,9 @@
     render();
   }
   function build(project){
-    const glossary=project.atlasLinks?{atlasLinks:true,atlasEntries:(project.atlasEntries||[]).map(a=>({id:a.id,title:a.title,summary:a.summary,aliases:a.aliases||[]}))}:{};
-    const quest={version:1,title:project.title,start:project.start,...(project.characters?.length?{characters:project.characters}:{}),variables:project.variables||[],scenes:project.scenes.map(s=>({id:s.id,title:s.title,text:s.text,...(s.dialogue?{dialogue:true}:{}),...(s.speaker?{speaker:s.speaker}:{}),...(s.actors?.length?{actors:s.actors}:{}),...(s.image?{image:s.image}:{}),choices:s.choices.map(c=>({text:c.text,target:c.target,...(c.check?{check:c.check}:{}),zone:c.zone||[],conditions:c.conditions||[],conditionMode:c.conditionMode||'all',effects:c.effects||[]}))}))};
+    const source=service.forExport(project);
+    const glossary=source.atlasLinks?{atlasLinks:true,atlasEntries:(source.atlasEntries||[]).map(a=>({id:a.id,title:a.title,summary:a.summary,aliases:a.aliases||[]}))}:{};
+    const quest={version:1,title:source.title,start:source.start,...(source.characters?.length?{characters:source.characters}:{}),variables:source.variables||[],scenes:source.scenes.map(s=>({id:s.id,title:s.title,text:s.text,...(s.dialogue?{dialogue:true}:{}),...(s.speaker?{speaker:s.speaker}:{}),...(s.actors?.length?{actors:s.actors}:{}),...(s.image?{image:s.image}:{}),choices:s.choices.map(c=>({text:c.text,target:c.target,...(c.check?{check:c.check}:{}),zone:c.zone||[],conditions:c.conditions||[],conditionMode:c.conditionMode||'all',effects:c.effects||[]}))}))};
     Object.assign(quest,glossary);
     rules.validateVariables(quest.variables);layers.validate(quest);
     const ids=new Set(quest.scenes.map(s=>s.id));

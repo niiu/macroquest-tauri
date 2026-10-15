@@ -8,7 +8,7 @@ function openPathEditor(source,choice=null,target=null,createdScene=false,onSave
   pathDraft.onSaved=onSaved;
   $('path-heading').textContent=source.dialogue?(choice?'Редактирование ответа':'Новый ответ'):(choice?'Редактирование перехода':'Новый переход');$('path-source').textContent='Из сцены: '+source.title;
   $('path-text').value=choice?.text||'Перейти в '+(project.scenes.find(s=>s.id===target)?.title||'сцену');
-  $('path-target').replaceChildren();appendOptions($('path-target'),project.scenes.map(s=>[s.id,s.title||'Без названия']));$('path-target').value=choice?.target||target||source.id;
+  $('path-target').replaceChildren();appendOptions($('path-target'),QuestService.playable(project).map(s=>[s.id,s.title||'Без названия']));$('path-target').value=choice?.target||target||source.id;
   renderPathSceneTitle();
   $('condition-mode').value=choice?.conditionMode||'all';$('delete-path').hidden=!choice;$('delete-path').textContent='Удалить путь';$('path-error').textContent='';
   pathDraft.check=choice?.check?structuredClone(choice.check):null;$('path-dice').checked=!!pathDraft.check;renderDiceTargets();
@@ -74,8 +74,9 @@ $('path-form').onsubmit=e=>{
 function renderDiceTargets(){
   $('dice-targets').replaceChildren();$('dice-targets').hidden=!pathDraft?.check;$('path-target').disabled=!!pathDraft?.check;
   if(!pathDraft?.check)return;
-  QuestRules.rollBands.forEach((band,i)=>{const label=el('label','field',band),select=el('select');select.setAttribute('aria-label','Выход D20: '+band);appendOptions(select,[['','Провал'],...project.scenes.map(s=>[s.id,s.title])]);select.value=pathDraft.check.targets[i];select.onchange=()=>{pathDraft.check.targets[i]=select.value;};label.append(select);$('dice-targets').append(label);});
-  const label=el('label','field','Сцена провала'),failure=el('select');failure.setAttribute('aria-label','Сцена провала');appendOptions(failure,project.scenes.map(s=>[s.id,s.title]));failure.value=pathDraft.check.failureTarget;failure.onchange=()=>{pathDraft.check.failureTarget=failure.value;};label.append(failure);$('dice-targets').append(label);
+  const playable=QuestService.playable(project);
+  QuestRules.rollBands.forEach((band,i)=>{const label=el('label','field',band),select=el('select');select.setAttribute('aria-label','Выход D20: '+band);appendOptions(select,[['','Провал'],...playable.map(s=>[s.id,s.title])]);select.value=pathDraft.check.targets[i];select.onchange=()=>{pathDraft.check.targets[i]=select.value;};label.append(select);$('dice-targets').append(label);});
+  const label=el('label','field','Сцена провала'),failure=el('select');failure.setAttribute('aria-label','Сцена провала');appendOptions(failure,playable.map(s=>[s.id,s.title]));failure.value=pathDraft.check.failureTarget;failure.onchange=()=>{pathDraft.check.failureTarget=failure.value;};label.append(failure);$('dice-targets').append(label);
 }
 $('path-dice').onchange=()=>{pathDraft.check=$('path-dice').checked?{targets:['','','','',''],failureTarget:pathDraft.source.id}:null;renderDiceTargets();};
 $('delete-path').onclick=()=>{
