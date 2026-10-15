@@ -3,7 +3,7 @@ function harness(){
   const listeners={},graph={addEventListener:(t,f)=>listeners[t]=f,getBoundingClientRect:()=>({left:100,top:50}),append(){},setPointerCapture(id){this.pointer=id;},hasPointerCapture(id){return this.pointer===id;},releasePointerCapture(){this.pointer=null;}};
   const nodes=[{id:'a',x:10,y:10},{id:'b',x:300,y:10},{id:'hidden',x:10,y:10}].map(s=>({dataset:{sceneId:s.id},hidden:s.id==='hidden',classList:{toggle(){}},scene:s}));
   const buttons=[],boxes=nodes.map(n=>({value:n.dataset.sceneId,checked:false}));let opened=0;
-  const context={Set,setTimeout:()=>{},project:{scenes:nodes.map(n=>n.scene)},zoom:.5,connectionSource:null,chaptersButton:{after(){}},nodeHeight:()=>154,
+  const context={Set,setTimeout:()=>{},QuestService:require('./service-nodes.js'),project:{scenes:nodes.map(n=>n.scene)},zoom:.5,connectionSource:null,chaptersButton:{after(){}},nodeHeight:()=>154,
     el:()=>{const e={style:{},remove(){}};buttons.push(e);return e;},
     $:id=>id==='graph'?graph:id==='chapter-members'?{querySelectorAll:()=>boxes}:{focus(){}},openChapters:()=>opened++,
     document:{querySelector:s=>s==='dialog[open]'?null:{append(){}},querySelectorAll:()=>nodes,addEventListener:(t,f)=>listeners['document:'+t]=f}};
