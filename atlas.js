@@ -43,6 +43,74 @@
     return data;
   }
   function categoryPath(data,id){const parts=[];let c=data.categories.find(c=>c.id===id);while(c){parts.unshift(c.title);c=data.categories.find(p=>p.id===c.parent);}return parts.join(' / ');}
+  const newId=()=>(typeof crypto!=='undefined'&&crypto.randomUUID)?crypto.randomUUID():'id'+Math.random().toString(36).slice(2)+Date.now().toString(36);
+  const kindTitles={character:'Персонажи',location:'Локации',item:'Предметы',lore:'Лор'};
+  // Keep export format stable for round-trip with workspace Markdown buttons.
+  function articleMarkdown(a){
+    const images=(a.images||[]).map(p=>'!['+String(p.name||'').replace(/[\[\]]/g,'')+']('+p.image+')').join('\n\n');
+    return '# '+a.title+'\n\n> '+String(a.summary||'').replace(/\n/g,'\n> ')+'\n\n'+(a.markdown||'')+(images?'\n\n'+images:'');
+  }
+  function toMarkdown(data){
+    validate(data);
+    return data.articles.map(a=>'<!-- Категория: '+categoryPath(data,a.category).replace(/--/g,'—')+' -->\n\n'+articleMarkdown(a)).join('\n\n---\n\n');
+  }
+  function kindFromPath(parts){
+    for(let i=parts.length-1;i>=0;i--){
+      const title=parts[i];
+      for(const [kind,label] of Object.entries(kindTitles))if(title===label)return kind;
+    }
+    return 'lore';
+  }
+  function ensureCategoryPath(data,parts){
+    if(!parts.length)throw Error('Укажите путь категории в комментарии <!-- Категория: … -->.');
+    const world=data.categories.find(c=>c.id===data.worldId);
+    let parent=world.id,start=0;
+    if(parts[0]===world.title)start=1;
+    if(start>=parts.length)throw Error('Индексная категория содержит только подкатегории. Перенесите статьи в обычную категорию.');
+    for(let i=start;i<parts.length;i++){
+      const title=parts[i].trim();
+      if(!title||title.length>100)throw Error('Некорректное название категории в Markdown.');
+      let child=data.categories.find(c=>(c.parent||'')===parent&&c.title===title);
+      if(!child){child={id:newId(),title,parent,indexOnly:false};data.categories.push(child);}
+      parent=child.id;
+    }
+    if(data.categories.find(c=>c.id===parent)?.indexOnly)throw Error('Индексная категория содержит только подкатегории. Перенесите статьи в обычную категорию.');
+    return parent;
+  }
+  function parseArticleBlock(block){
+    const text=block.trim();if(!text)return null;
+    const cat=text.match(/<!--\s*Категория:\s*([\s\S]*?)\s*-->/);
+    const path=cat?cat[1].replace(/\u2014/g,'--').split('/').map(s=>s.trim()).filter(Boolean):['Мир','Лор'];
+    let rest=text.replace(/<!--\s*Категория:[\s\S]*?-->\s*/,'').trim();
+    const titleMatch=rest.match(/^#\s+(.+?)(?:\r?\n|$)/);if(!titleMatch)throw Error('В статье Markdown нужен заголовок # Название.');
+    const title=titleMatch[1].trim();if(!title||title.length>100)throw Error('Некорректное название статьи в Markdown.');
+    rest=rest.slice(titleMatch[0].length).replace(/^(?:\r?\n)+/,'');
+    const summaryLines=[];
+    while(true){
+      const line=rest.match(/^[ \t]*>[ \t]?(.*?)(?:\r?\n|$)/);if(!line)break;
+      summaryLines.push(line[1]);rest=rest.slice(line[0].length);
+    }
+    const summary=summaryLines.join('\n');if(summary.length>2000)throw Error('Краткое описание в Markdown слишком длинное.');
+    rest=rest.replace(/^(?:\r?\n)+/,'');
+    const images=[];const imageRe=/!\[([^\]]*)\]\((data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2})\)/g;
+    let match;while((match=imageRe.exec(rest))){const name=(match[1]||'image').trim().slice(0,100)||'image';images.push({id:newId(),name,image:match[2]});if(images.length>30)throw Error('Не более 30 изображений на статью.');}
+    const markdown=rest.replace(/\n?!\[[^\]]*\]\(data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}\)/g,'').trim();
+    if(markdown.length>1000000)throw Error('Текст статьи в Markdown слишком длинный.');
+    return {title,summary,markdown,images,path,kind:kindFromPath(path)};
+  }
+  function fromMarkdown(text){
+    if(typeof text!=='string'||!text.trim())throw Error('Пустой Markdown атласа.');
+    const data=migrate(empty());
+    const blocks=text.split(/\r?\n[ \t]*---[ \t]*\r?\n/);
+    for(const block of blocks){
+      const parsed=parseArticleBlock(block);if(!parsed)continue;
+      const category=ensureCategoryPath(data,parsed.path);
+      data.articles.push({id:newId(),title:parsed.title,kind:parsed.kind,category,summary:parsed.summary,aliases:[],markdown:parsed.markdown,images:parsed.images});
+      if(data.articles.length>10000)throw Error('Неверный формат атласа.');
+    }
+    if(!data.articles.length)throw Error('В Markdown нет статей с заголовком # Название.');
+    return validate(data);
+  }
   function entries(quest){return quest.atlasEntries||[];}
   function segments(text,articles){
     const names=new Map();
@@ -97,6 +165,6 @@
     attach(quest,article);return existing||c;
   }
   const css='.atlas-link{display:inline;padding:0;border:0;border-bottom:1px dotted currentColor;border-radius:0;background:none;color:#c5da98;font:inherit;cursor:pointer}.atlas-description{max-width:560px;width:85vw;background:#1d251b;color:#e5e8dc;border:1px solid #718653;border-radius:12px;padding:24px}.atlas-description p{white-space:pre-wrap}.atlas-description::backdrop{background:#0009}';
-  const api={empty,migrate,validate,categoryPath,segments,renderText,attach,importCharacter,css};api.standaloneSource=()=>`(${installAtlas.toString()})(globalThis);`;
+  const api={empty,migrate,validate,categoryPath,articleMarkdown,toMarkdown,fromMarkdown,segments,renderText,attach,importCharacter,css};api.standaloneSource=()=>`(${installAtlas.toString()})(globalThis);`;
   if(typeof module!=='undefined')module.exports=api;else root.QuestAtlas=api;
 })(globalThis);

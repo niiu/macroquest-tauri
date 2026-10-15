@@ -58,3 +58,26 @@ test('atlas sprite updates keep placement and dialogue references across reorder
   assert.equal(c.name,'Новый страж');assert.equal(Layers.picture(c,sprite).name,'Изменённый');assert.equal(q.characters.length,1);
   a.images=a.images.filter(p=>p.id!=='p2');Atlas.importCharacter(q,a);assert.ok(Layers.picture(c,sprite));Layers.validate(q);
 });
+test('markdown export/import round trip keeps title, summary, body, images and category path',()=>{
+  const source=Atlas.migrate(data());
+  source.articles[0].kind='character';
+  const characters=source.categories.find(c=>c.parent===source.worldId&&c.title==='Персонажи');
+  const locations=source.categories.find(c=>c.parent===source.worldId&&c.title==='Локации');
+  source.articles[0].category=characters.id;
+  source.categories.push({id:'tower-cat',title:'Башня',parent:locations.id,indexOnly:false});
+  source.articles.push({id:'tower',title:'Башня',kind:'location',category:'tower-cat',summary:'Камень',markdown:'Древняя',aliases:[],images:[{id:'t1',name:'Фасад',image:img}]});
+  Atlas.validate(source);
+  const md=Atlas.toMarkdown(source),back=Atlas.fromMarkdown(md);
+  assert.equal(back.articles.length,2);
+  const guard=back.articles.find(a=>a.title==='Страж'),tower=back.articles.find(a=>a.title==='Башня');
+  assert.equal(guard.summary,'Хранитель ворот');assert.equal(guard.markdown,'Секреты мира');assert.equal(guard.kind,'character');
+  assert.equal(guard.images.length,2);assert.equal(guard.images[0].name,'Обычный');assert.equal(guard.images[0].image,img);
+  assert.equal(Atlas.categoryPath(back,guard.category),'Мир / Персонажи');
+  assert.equal(tower.kind,'location');assert.equal(Atlas.categoryPath(back,tower.category),'Мир / Локации / Башня');
+  assert.equal(tower.images[0].name,'Фасад');
+});
+test('markdown import rejects index-only targets and empty or broken documents',()=>{
+  assert.throws(()=>Atlas.fromMarkdown(''),/Пустой/);
+  assert.throws(()=>Atlas.fromMarkdown('нет заголовка'),/заголовок/);
+  assert.throws(()=>Atlas.fromMarkdown('<!-- Категория: Мир -->\n\n# Статья\n\n> кратко\n\nтекст'),/Индексная/);
+});
