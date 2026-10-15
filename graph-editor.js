@@ -3,7 +3,7 @@ const mobileEditor=matchMedia('(max-width: 720px)');
 let dockPreference=false,connectionSource=null,connectionPointer=null,connectionFrame=0;
 let lastDisconnected=null;
 let lastDeletedScene=null,sceneDragId=null;
-const undoScene=el('button','quiet','в†¶ Р’РµСЂРЅСѓС‚СЊ СЃС†РµРЅСѓ');undoScene.hidden=true;
+const undoScene=el('button','quiet','↶ Вернуть сцену');undoScene.hidden=true;
 document.querySelector('.canvas-footer').append(undoScene);
 function deleteScene(id){
   const removed=project.scenes.find(s=>s.id===id);if(!removed)return;
@@ -16,7 +16,7 @@ function deleteScene(id){
   project.scenes=project.scenes.filter(s=>s!==removed);
   if(project.start===id)project.start=playableLeft[0].id;
   if(selected===id)selected=project.start;
-  save();render();undoScene.hidden=false;$('graph-status').textContent=(QuestService.isNote(removed)?'Р—Р°РјРµС‚РєР° СѓРґР°Р»РµРЅР°':'РЎС†РµРЅР° СѓРґР°Р»РµРЅР°')+'. Р•С‘ РјРѕР¶РЅРѕ РІРµСЂРЅСѓС‚СЊ РєРЅРѕРїРєРѕР№ СЂСЏРґРѕРј.';
+  save();render();undoScene.hidden=false;$('graph-status').textContent=(QuestService.isNote(removed)?'Заметка удалена':'Сцена удалена')+'. Её можно вернуть кнопкой рядом.';
 }
 undoScene.onclick=()=>{
   const last=lastDeletedScene;if(!last||last.project!==project)return;
@@ -33,25 +33,25 @@ function moveScene(id,before,after=false){
   const [s]=project.scenes.splice(from,1),to=project.scenes.findIndex(s=>s.id===before);
   project.scenes.splice(to<0?project.scenes.length:to+(after?1:0),0,s);save();renderGraph();
 }
-const undoDisconnect=el('button','quiet','в†¶ Р’РµСЂРЅСѓС‚СЊ РїСѓС‚СЊ');
+const undoDisconnect=el('button','quiet','↶ Вернуть путь');
 undoDisconnect.id='undo-disconnect';undoDisconnect.hidden=true;
 document.querySelector('.canvas-footer').append(undoDisconnect);
 function pathTargets(choice){return choice.check?[...new Set([...choice.check.targets,choice.check.failureTarget].filter(Boolean))]:[choice.target];}
-function dialogueLinks(source){return (source.actors||[]).filter(actor=>actor.dialogue&&project.scenes.some(s=>s.id===actor.dialogue)).map(actor=>({source,choice:actor,actor,target:actor.dialogue,name:project.characters?.find(c=>c.id===actor.character)?.name||'РџРµСЂСЃРѕРЅР°Р¶'}));}
+function dialogueLinks(source){return (source.actors||[]).filter(actor=>actor.dialogue&&project.scenes.some(s=>s.id===actor.dialogue)).map(actor=>({source,choice:actor,actor,target:actor.dialogue,name:project.characters?.find(c=>c.id===actor.character)?.name||'Персонаж'}));}
 function noteLinks(target){return project.scenes.filter(s=>QuestService.isNote(s)&&s.target===target).map(note=>({source:note,choice:note,note:true,target}));}
 function incomingPaths(target){return project.scenes.flatMap(source=>[...source.choices.filter(choice=>pathTargets(choice).includes(target)).map(choice=>({source,choice})),...dialogueLinks(source).filter(link=>link.target===target),...noteLinks(target)]);}
 function disconnectDialogue(source,actor){
   if(!source.actors?.includes(actor)||!actor.dialogue)return;
   lastDisconnected={project,source,actor,target:actor.dialogue};delete actor.dialogue;
-  save();renderGraph();renderInspector();$('graph-status').textContent='РЎРІСЏР·СЊ СЃ РґРёР°Р»РѕРіРѕРј РѕС‚РєР»СЋС‡РµРЅР°. РџРµСЂСЃРѕРЅР°Р¶ РѕСЃС‚Р°С‘С‚СЃСЏ РЅР° СЃС†РµРЅРµ.';
+  save();renderGraph();renderInspector();$('graph-status').textContent='Связь с диалогом отключена. Персонаж остаётся на сцене.';
 }
 function nodeHeight(s){return Math.max(typeof editorNodeHeight==='function'?editorNodeHeight():154,96+(incomingPaths(s.id).length-1)*28);}
 function disconnectPath(source,choice){
-  if(QuestService.isNote(source)&&choice===source){lastDisconnected={project,source,note:true,target:source.target||''};source.target='';save();renderGraph();renderInspector();$('graph-status').textContent='Р—Р°РјРµС‚РєР° РѕС‚РєР»СЋС‡РµРЅР° РѕС‚ СЃС†РµРЅС‹.';return;}
+  if(QuestService.isNote(source)&&choice===source){lastDisconnected={project,source,note:true,target:source.target||''};source.target='';save();renderGraph();renderInspector();$('graph-status').textContent='Заметка отключена от сцены.';return;}
   const index=source.choices.indexOf(choice);if(index<0)return;
   lastDisconnected={project,source,choice,index};source.choices.splice(index,1);
   save();renderGraph();renderInspector();
-  $('graph-status').textContent=`РџСѓС‚СЊ В«${choice.text}В» РѕС‚РєР»СЋС‡С‘РЅ.`;
+  $('graph-status').textContent=`Путь «${choice.text}» отключён.`;
 }
 undoDisconnect.onclick=()=>{
   const last=lastDisconnected;lastDisconnected=null;
@@ -59,7 +59,7 @@ undoDisconnect.onclick=()=>{
   if(last.note){if(last.target&&project.scenes.some(s=>s.id===last.target&&!QuestService.isService(s))){last.source.target=last.target;save();renderGraph();renderInspector();}return;}
   if(last.actor){if(last.source.actors?.includes(last.actor)&&!last.actor.dialogue&&project.scenes.some(s=>s.id===last.target&&s.dialogue)){last.actor.dialogue=last.target;save();renderGraph();renderInspector();}return;}
   if(!project.scenes.some(s=>s.id===last.choice.target))return;
-  try{QuestRules.validateChoice(last.choice,project.variables||[]);}catch(e){renderGraph();$('graph-status').textContent='РџСѓС‚СЊ РЅРµР»СЊР·СЏ РІРµСЂРЅСѓС‚СЊ: РѕРґРёРЅ РёР· РµРіРѕ РїР°СЂР°РјРµС‚СЂРѕРІ СѓРґР°Р»С‘РЅ.';return;}
+  try{QuestRules.validateChoice(last.choice,project.variables||[]);}catch(e){renderGraph();$('graph-status').textContent='Путь нельзя вернуть: один из его параметров удалён.';return;}
   last.source.choices.splice(Math.min(last.index,last.source.choices.length),0,last.choice);
   save();renderGraph();renderInspector();setConnectionStatus();
 };
@@ -70,7 +70,7 @@ function updateEditorPlacement(){
   if(wasOpen)$('scene-dialog').close();
   (docked?$('editor-dock'):$('scene-dialog')).append($('scene-editor'));
   $('editor-dock').hidden=!docked;$('dock-editor').checked=docked;$('dock-editor').disabled=mobileEditor.matches;
-  $('dock-editor').title=mobileEditor.matches?'РќР° РјРѕР±РёР»СЊРЅРѕРј СЌРєСЂР°РЅРµ СЂРµРґР°РєС‚РѕСЂ РЅР°С…РѕРґРёС‚СЃСЏ РїРѕРґ РіСЂР°С„РѕРј':'';
+  $('dock-editor').title=mobileEditor.matches?'На мобильном экране редактор находится под графом':'';
   $('close-scene-editor').hidden=docked;$('collapse-editor').hidden=!docked;
   document.body.classList.toggle('editor-docked',docked);
 }
@@ -102,8 +102,8 @@ function renderGraph(){
   project.scenes.forEach((s,i)=>{
     if(!QuestService.isService(s)){
       const item=el('button','scene-item'+(s.id===selected?' active':''));item.append(el('span','number',String(i+1).padStart(2,'0')));
-      const label=el('span','',s.title||'Р‘РµР· РЅР°Р·РІР°РЅРёСЏ');label.append(el('small','',s.dialogue?'Р”РёР°Р»РѕРі':s.id===project.start?'РќР°С‡Р°Р»СЊРЅР°СЏ СЃС†РµРЅР°':(s.choices.length||dialogueLinks(s).length)?'РЎС†РµРЅР°':'Р¤РёРЅР°Р»'));item.append(label);item.onclick=()=>select(s.id);$('scene-list').append(item);
-      item.dataset.sceneId=s.id;item.draggable=true;item.title='РџРµСЂРµС‚Р°С‰РёС‚Рµ РґР»СЏ РёР·РјРµРЅРµРЅРёСЏ РїРѕСЂСЏРґРєР°. Alt + в†‘/в†“ вЂ” РїРµСЂРµРјРµСЃС‚РёС‚СЊ СЃ РєР»Р°РІРёР°С‚СѓСЂС‹.';
+      const label=el('span','',s.title||'Без названия');label.append(el('small','',s.dialogue?'Диалог':s.id===project.start?'Начальная сцена':(s.choices.length||dialogueLinks(s).length)?'Сцена':'Финал'));item.append(label);item.onclick=()=>select(s.id);$('scene-list').append(item);
+      item.dataset.sceneId=s.id;item.draggable=true;item.title='Перетащите для изменения порядка. Alt + ↑/↓ — переместить с клавиатуры.';
       item.ondragstart=e=>{sceneDragId=s.id;e.dataTransfer.setData('text/plain',s.id);e.dataTransfer.effectAllowed='move';};
       item.ondragover=e=>{if(sceneDragId){e.preventDefault();e.dataTransfer.dropEffect='move';}};
       item.ondrop=e=>{e.preventDefault();const r=item.getBoundingClientRect();if(sceneDragId)moveScene(sceneDragId,s.id,e.clientY>r.top+r.height/2);sceneDragId=null;};item.ondragend=()=>{sceneDragId=null;};
@@ -112,32 +112,32 @@ function renderGraph(){
     const note=QuestService.isNote(s);
     const node=el('div','node'+(note?' note-node':'')+(s.id===selected?' selected':''));node.style.left=s.x+'px';node.style.top=s.y+'px';node.dataset.sceneId=s.id;
     node.style.minHeight=(note?120:nodeHeight(s))+'px';
-    const card=el('button','node-card');card.setAttribute('aria-label',(note?'Р—Р°РјРµС‚РєР°: ':'Р РµРґР°РєС‚РёСЂРѕРІР°С‚СЊ: ')+(s.title||''));
-    const top=el('div','node-top',note?'вњЋ Р—РђРњР•РўРљРђ':s.dialogue?'вЏ Р”РРђР›РћР“':s.id===project.start?'вљ‘ РќРђР§РђР›Рћ':(s.choices.length||dialogueLinks(s).length)?'в—‡ РЎР¦Р•РќРђ':'вњ¦ Р¤РРќРђР›');
+    const card=el('button','node-card');card.setAttribute('aria-label',(note?'Заметка: ':'Редактировать: ')+(s.title||''));
+    const top=el('div','node-top',note?'✎ ЗАМЕТКА':s.dialogue?'☏ ДИАЛОГ':s.id===project.start?'⚑ НАЧАЛО':(s.choices.length||dialogueLinks(s).length)?'◇ СЦЕНА':'✦ ФИНАЛ');
     if(!note)top.append(el('span','',String(i+1).padStart(2,'0')));
     const body=el('div','node-body');
-    if(note)body.append(el('h3','',s.title||'Р—Р°РјРµС‚РєР°'),el('p','',QuestService.preview(s)),el('div','node-count',s.target?'в†’ '+(project.scenes.find(n=>n.id===s.target)?.title||'СЃС†РµРЅР°'):'РќРµ РїРѕРґРєР»СЋС‡РµРЅР°'));
+    if(note)body.append(el('h3','',s.title||'Заметка'),el('p','',QuestService.preview(s)),el('div','node-count',s.target?'→ '+(project.scenes.find(n=>n.id===s.target)?.title||'сцена'):'Не подключена'));
     else{const noteCount=QuestService.notesFor(project,s.id).length;body.append(el('h3','',s.title||'Без названия'),el('p','',s.text||'Здесь начинается история…'),el('div','node-count',`${s.choices.length} переходов${dialogueLinks(s).length?' · ☏ '+dialogueLinks(s).length+' диалогов':''}${noteCount?' · ✎ '+noteCount:''}${s.image?' · ▧ картинка':''}`));}
     card.append(top,body);
     card.onclick=()=>{if(performance.now()<Number(node.dataset.suppressUntil||0))return;if(connectionSource)completeConnection(s.id);else if(note){selected=s.id;renderGraph();openNoteEditor(s.id);}else select(s.id);};
     card.ondblclick=e=>{if(note){e.preventDefault();e.stopPropagation();openNoteEditor(s.id);}};
     card.onpointerdown=e=>{if(!connectionSource)dragScene(e,s,node,card);};
     node.append(card);
-    const removeScene=el('button','node-delete','Г—');removeScene.setAttribute('aria-label',(note?'РЈРґР°Р»РёС‚СЊ Р·Р°РјРµС‚РєСѓ: ':'РЈРґР°Р»РёС‚СЊ СЃС†РµРЅСѓ: ')+s.title);
+    const removeScene=el('button','node-delete','×');removeScene.setAttribute('aria-label',(note?'Удалить заметку: ':'Удалить сцену: ')+s.title);
     removeScene.disabled=!note&&QuestService.playable(project).length===1;removeScene.onclick=e=>{e.stopPropagation();deleteScene(s.id);};node.append(removeScene);
     if(!note){
       const incoming=incomingPaths(s.id);
       (incoming.length?incoming:[null]).forEach((path,index)=>{
         const input=el('button','node-port port-in'+(path?' connected-port':'')+(path?.note?' note-port':''));input.style.top=(76+index*28)+'px';
-        const label=path?.note?`РћС‚РєР»СЋС‡РёС‚СЊ Р·Р°РјРµС‚РєСѓ: ${path.source.title} в†’ ${s.title}`:path?.actor?`РћС‚РєР»СЋС‡РёС‚СЊ СЂР°Р·РіРѕРІРѕСЂ: ${path.source.title} в†’ ${s.title}. ${path.name}`:path?`РћС‚РєР»СЋС‡РёС‚СЊ РїСѓС‚СЊ: ${path.source.title} в†’ ${s.title}. ${path.choice.text}`:'Р’С…РѕРґ: '+s.title;
-        input.dataset.restLabel=label;input.setAttribute('aria-label',label);input.title=path?label:'Р—Р°РІРµСЂС€РёС‚СЊ РїСѓС‚СЊ Р·РґРµСЃСЊ';
-        if(path)input.append(el('span','port-mark','Г—'));
+        const label=path?.note?`Отключить заметку: ${path.source.title} → ${s.title}`:path?.actor?`Отключить разговор: ${path.source.title} → ${s.title}. ${path.name}`:path?`Отключить путь: ${path.source.title} → ${s.title}. ${path.choice.text}`:'Вход: '+s.title;
+        input.dataset.restLabel=label;input.setAttribute('aria-label',label);input.title=path?label:'Завершить путь здесь';
+        if(path)input.append(el('span','port-mark','×'));
         input.onclick=e=>{e.stopPropagation();if(connectionSource)completeConnection(s.id);else if(path?.actor)disconnectDialogue(path.source,path.actor);else if(path)disconnectPath(path.source,path.choice);};
         node.append(input);
       });
     }
-    const output=el('button','node-port port-out',note?'в†’':'+');output.setAttribute('aria-label',note?'РџСЂРёРєСЂРµРїРёС‚СЊ Р·Р°РјРµС‚РєСѓ Рє СЃС†РµРЅРµ: '+s.title:'РџСЂРѕР»РѕР¶РёС‚СЊ РїСѓС‚СЊ РёР·: '+s.title);
-    output.title=note?'РџРµСЂРµС‚Р°С‰РёС‚Рµ Рє СЃС†РµРЅРµ, Рє РєРѕС‚РѕСЂРѕР№ РѕС‚РЅРѕСЃРёС‚СЃСЏ Р·Р°РјРµС‚РєР°':'РџРµСЂРµС‚Р°С‰РёС‚Рµ Рє РґСЂСѓРіРѕР№ СЃС†РµРЅРµ РёР»Рё РЅР°Р¶РјРёС‚Рµ Рё РІС‹Р±РµСЂРёС‚Рµ СЃС†РµРЅСѓ';
+    const output=el('button','node-port port-out',note?'→':'+');output.setAttribute('aria-label',note?'Прикрепить заметку к сцене: '+s.title:'Проложить путь из: '+s.title);
+    output.title=note?'Перетащите к сцене, к которой относится заметка':'Перетащите к другой сцене или нажмите и выберите сцену';
     output.onpointerdown=e=>beginConnection(e,s,output);output.onclick=e=>{e.stopPropagation();if(e.detail===0){connectionSource=s;setConnectionStatus();}};
     node.append(output);$('nodes').append(node);
   });if(typeof renderChapterGroups==='function')renderChapterGroups();drawEdges();setConnectionStatus();
@@ -163,17 +163,17 @@ function drawEdges(){
       svg.append(svgEl('path',{d:g.d,fill:'none',stroke:'#d4b56a','stroke-width':2,'stroke-dasharray':'5 4','marker-end':'url(#path-arrow)'}));
       const open=e=>{e.stopPropagation();if(!connectionSource)openNoteEditor(s.id);};
       const hit=svgEl('path',{d:g.d,fill:'none',stroke:'transparent','stroke-width':18,class:'edge-hit'});hit.onclick=open;svg.append(hit);
-      const label=el('button','edge-label note-edge','вњЋ '+(s.title||'Р—Р°РјРµС‚РєР°'));label.style.left=g.lx+'px';label.style.top=g.ly+'px';
-      label.title='Р—Р°РјРµС‚РєР° В· РЅР°Р¶РјРёС‚Рµ, С‡С‚РѕР±С‹ РѕС‚РєСЂС‹С‚СЊ';label.onclick=open;$('edge-labels').append(label);
+      const label=el('button','edge-label note-edge','✎ '+(s.title||'Заметка'));label.style.left=g.lx+'px';label.style.top=g.ly+'px';
+      label.title='Заметка · нажмите, чтобы открыть';label.onclick=open;$('edge-labels').append(label);
       continue;
     }
     for(const c of s.choices){for(const target of pathTargets(c)){const t=project.scenes.find(n=>n.id===target);if(!t||QuestService.isService(t))continue;if(typeof QuestChapters!=='undefined'&&QuestChapters.internal(project,s,t))continue;
       const lane=lanes.get(t.id)||0;lanes.set(t.id,lane+1);const g=edgeGeometry(s,t,lane,c);
       const path=svgEl('path',{d:g.d,fill:'none',stroke:s.id===selected?'#aabc7d':'#647953','stroke-width':2,'marker-end':'url(#path-arrow)'});svg.append(path);
       const hit=svgEl('path',{d:g.d,fill:'none',stroke:'transparent','stroke-width':18,class:'edge-hit'});hit.onclick=e=>{e.stopPropagation();if(!connectionSource)openPathEditor(s,c);};svg.append(hit);
-      const label=el('button','edge-label'+(c.conditions?.length?' has-conditions':''),`${c.conditions?.length?'в—† ':''}${c.text||'РџРµСЂРµС…РѕРґ'}`);label.style.left=g.lx+'px';label.style.top=g.ly+'px';label.title=QuestRules.summary(c,project.variables||[]);label.setAttribute('aria-label',`РџСѓС‚СЊ: ${s.title} в†’ ${t.title}. ${c.text}. ${label.title}`);label.onclick=e=>{e.stopPropagation();if(!connectionSource)openPathEditor(s,c);};$('edge-labels').append(label);
-      if(c.effects?.length){label.classList.add('has-effects');label.prepend('в†Ї ');label.title+=' В· РџСЂРё РїРµСЂРµС…РѕРґРµ: '+QuestRules.effectsSummary(c,project.variables||[]);label.setAttribute('aria-label',`РџСѓС‚СЊ: ${s.title} в†’ ${t.title}. ${c.text}. ${label.title}`);}
-      if(c.check){const bands=[...c.check.targets.flatMap((id,i)=>id===target?[QuestRules.rollBands[i]]:[]),...(c.check.failureTarget===target?['РџСЂРѕРІР°Р»']:[])].join(', ');label.prepend('рџЋІ ');label.append(el('small','',bands));label.title+=' В· D20: '+bands;}
+      const label=el('button','edge-label'+(c.conditions?.length?' has-conditions':''),`${c.conditions?.length?'◆ ':''}${c.text||'Переход'}`);label.style.left=g.lx+'px';label.style.top=g.ly+'px';label.title=QuestRules.summary(c,project.variables||[]);label.setAttribute('aria-label',`Путь: ${s.title} → ${t.title}. ${c.text}. ${label.title}`);label.onclick=e=>{e.stopPropagation();if(!connectionSource)openPathEditor(s,c);};$('edge-labels').append(label);
+      if(c.effects?.length){label.classList.add('has-effects');label.prepend('↯ ');label.title+=' · При переходе: '+QuestRules.effectsSummary(c,project.variables||[]);label.setAttribute('aria-label',`Путь: ${s.title} → ${t.title}. ${c.text}. ${label.title}`);}
+      if(c.check){const bands=[...c.check.targets.flatMap((id,i)=>id===target?[QuestRules.rollBands[i]]:[]),...(c.check.failureTarget===target?['Провал']:[])].join(', ');label.prepend('🎲 ');label.append(el('small','',bands));label.title+=' · D20: '+bands;}
     }
     }
     for(const link of dialogueLinks(s)){
@@ -182,10 +182,10 @@ function drawEdges(){
       svg.append(svgEl('path',{d:g.d,fill:'none',stroke:'#8ecbd8','stroke-width':2,'stroke-dasharray':'7 5','marker-end':'url(#path-arrow)'}));
       const open=e=>{e.stopPropagation();if(!connectionSource)select(t.id);};
       const hit=svgEl('path',{d:g.d,fill:'none',stroke:'transparent','stroke-width':18,class:'edge-hit'});hit.onclick=open;svg.append(hit);
-      const label=el('button','edge-label dialogue-edge','вЏ '+link.name);
+      const label=el('button','edge-label dialogue-edge','☏ '+link.name);
       label.style.left=g.lx+'px';label.style.top=g.ly+'px';
-      label.title='Р Р°Р·РіРѕРІРѕСЂ СЃ РїРµСЂСЃРѕРЅР°Р¶РµРј: '+link.name+' В· '+t.title+' В· РќР°Р¶РјРёС‚Рµ, С‡С‚РѕР±С‹ РѕС‚РєСЂС‹С‚СЊ СЂРµРґР°РєС‚РѕСЂ РґРёР°Р»РѕРіР°';
-      label.setAttribute('aria-label','РћС‚РєСЂС‹С‚СЊ РґРёР°Р»РѕРі: '+s.title+' в†’ '+t.title+'. '+link.name);
+      label.title='Разговор с персонажем: '+link.name+' · '+t.title+' · Нажмите, чтобы открыть редактор диалога';
+      label.setAttribute('aria-label','Открыть диалог: '+s.title+' → '+t.title+'. '+link.name);
       label.onclick=open;$('edge-labels').append(label);
     }
   }
@@ -201,12 +201,12 @@ function setConnectionStatus(){
   document.body.classList.toggle('connecting',!!connectionSource);
   for(const input of document.querySelectorAll('.port-in')){
     const target=project.scenes.find(s=>s.id===input.closest('[data-scene-id]').dataset.sceneId);
-    const label=connectionSource?(QuestService.isNote(connectionSource)?'РџСЂРёРєСЂРµРїРёС‚СЊ Р·Р°РјРµС‚РєСѓ Рє: ':'РџРѕРґРєР»СЋС‡РёС‚СЊ Рє СЃС†РµРЅРµ: ')+target.title:input.dataset.restLabel;
+    const label=connectionSource?(QuestService.isNote(connectionSource)?'Прикрепить заметку к: ':'Подключить к сцене: ')+target.title:input.dataset.restLabel;
     input.setAttribute('aria-label',label);input.title=label;
   }
   $('graph-status').textContent=connectionSource
-    ?(QuestService.isNote(connectionSource)?`Р—Р°РјРµС‚РєР° В«${connectionSource.title}В»: РІС‹Р±РµСЂРёС‚Рµ СЃС†РµРЅСѓ РґР»СЏ РїСЂРёРІСЏР·РєРё. Esc вЂ” РѕС‚РјРµРЅР°.`:`РР· В«${connectionSource.title}В»: РІС‹Р±РµСЂРёС‚Рµ СЃС†РµРЅСѓ РёР»Рё РѕС‚РїСѓСЃС‚РёС‚Рµ РїСѓС‚СЊ РЅР° РїСѓСЃС‚РѕРј РїРѕР»Рµ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РЅРѕРІРѕР№. Esc вЂ” РѕС‚РјРµРЅР°.`)
-    :'РљСЂРµСЃС‚РёРє Сѓ РІС…РѕРґР° вЂ” РѕС‚РєР»СЋС‡РёС‚СЊ РїСѓС‚СЊ В· Р”РІРѕР№РЅРѕР№ РєР»РёРє РїРѕ Р·Р°РјРµС‚РєРµ вЂ” С‚РµРєСЃС‚ В· РљР»РёРє РїРѕ РїСѓС‚Рё вЂ” СѓСЃР»РѕРІРёСЏ';
+    ?(QuestService.isNote(connectionSource)?`Заметка «${connectionSource.title}»: выберите сцену для привязки. Esc — отмена.`:`Из «${connectionSource.title}»: выберите сцену или отпустите путь на пустом поле для создания новой. Esc — отмена.`)
+    :'Крестик у входа — отключить путь · Двойной клик по заметке — текст · Клик по пути — условия';
 }
 function cancelConnection(){connectionSource=null;connectionPointer=null;cancelAnimationFrame(connectionFrame);connectionFrame=0;$('connection-preview').replaceChildren();setConnectionStatus();}
 function completeConnection(target){
@@ -214,21 +214,21 @@ function completeConnection(target){
   if(!source||!project.scenes.includes(source))return;
   const dest=project.scenes.find(s=>s.id===target);if(!dest)return;
   if(QuestService.isNote(source)){
-    if(QuestService.isService(dest)){$('graph-status').textContent='Р—Р°РјРµС‚РєСѓ РјРѕР¶РЅРѕ РїСЂРёРєСЂРµРїРёС‚СЊ С‚РѕР»СЊРєРѕ Рє РѕР±С‹С‡РЅРѕР№ СЃС†РµРЅРµ.';return;}
-    source.target=dest.id;save();renderGraph();renderInspector();$('graph-status').textContent='Р—Р°РјРµС‚РєР° РїСЂРёРєСЂРµРїР»РµРЅР° Рє В«'+dest.title+'В».';return;
+    if(QuestService.isService(dest)){$('graph-status').textContent='Заметку можно прикрепить только к обычной сцене.';return;}
+    source.target=dest.id;save();renderGraph();renderInspector();$('graph-status').textContent='Заметка прикреплена к «'+dest.title+'».';return;
   }
-  if(QuestService.isService(dest)){$('graph-status').textContent='РРіСЂРѕРІРѕР№ РїСѓС‚СЊ РЅРµР»СЊР·СЏ РІРµСЃС‚Рё РЅР° СЃР»СѓР¶РµР±РЅСѓСЋ РЅРѕРґСѓ.';return;}
+  if(QuestService.isService(dest)){$('graph-status').textContent='Игровой путь нельзя вести на служебную ноду.';return;}
   openPathEditor(source,null,target);
 }
 function createConnectedScene(clientX,clientY){
   const source=connectionSource;cancelConnection();
   if(!source||!project.scenes.includes(source)||QuestService.isService(source))return;
-  if(project.scenes.length>=500){$('graph-status').textContent='РњР°РєСЃРёРјСѓРј 500 СѓР·Р»РѕРІ. РќРѕРІР°СЏ СЃС†РµРЅР° РЅРµ СЃРѕР·РґР°РЅР°.';return;}
+  if(project.scenes.length>=500){$('graph-status').textContent='Максимум 500 узлов. Новая сцена не создана.';return;}
   const rect=$('graph').getBoundingClientRect();
   const position=QuestGraphArea.position(QuestGraphArea.bounds(project,nodeHeight),(clientX-rect.left)/zoom-110,(clientY-rect.top)/zoom-76);
-  const next={id:'s'+crypto.randomUUID(),title:source.dialogue?'РЎР»РµРґСѓСЋС‰Р°СЏ СЂРµРїР»РёРєР°':'РќРѕРІР°СЏ СЃС†РµРЅР°',text:'',...position,choices:[]};
+  const next={id:'s'+crypto.randomUUID(),title:source.dialogue?'Следующая реплика':'Новая сцена',text:'',...position,choices:[]};
   if(source.dialogue){next.dialogue=true;next.speaker=source.speaker||'';QuestLayers.inheritArtwork(source,next);}
-  const choice={text:source.dialogue?'РџСЂРѕРґРѕР»Р¶РёС‚СЊ СЂР°Р·РіРѕРІРѕСЂ':'РџРµСЂРµР№С‚Рё РІ РЅРѕРІСѓСЋ СЃС†РµРЅСѓ',target:next.id,zone:[]};
+  const choice={text:source.dialogue?'Продолжить разговор':'Перейти в новую сцену',target:next.id,zone:[]};
   project.scenes.push(next);source.choices.push(choice);activeChoice=source.choices.length-1;
   save();renderGraph();renderInspector();openPathEditor(source,choice,next.id,true);
 }
