@@ -20,5 +20,13 @@ function updateGraphicMode(){
     graphicLayout.append(graphicNodes.image,graphicText,graphicChoices);
   }else if(!enabled&&graphicApplied){for(const [key,node] of Object.entries(graphicNodes))graphicAnchors[key].after(node);}
   graphicLayout.hidden=!enabled;graphicApplied=enabled;graphicOwner=project;graphicScene=selected;
+  const dialogue=typeof scene==='function'&&!!scene()?.dialogue;
+  const panels=typeof document.querySelectorAll==='function'?document.querySelectorAll('[data-editor-panel]'):[];
+  for(const panel of panels){
+    if(!panel.dataset)continue;
+    if(panel.dataset.editorPanel==='image'){panel.hidden=!enabled;continue;}
+    panel.hidden=dialogue;
+  }
+  if(graphicNodes.image)graphicNodes.image.hidden=!enabled;
 }
 graphicToggle.onchange=()=>{project.graphicMode=graphicToggle.checked;updateGraphicMode();if(typeof renderActorLayers==='function')renderActorLayers();save();};

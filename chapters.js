@@ -23,12 +23,31 @@
     }
     return {x:Math.max(0,box.x-14),y:Math.max(0,box.y-42),width:box.width+28,height:box.height+56};
   }
+  const EJECT=36;
   function atPoint(p,x,y,height=()=>154){
     let hit=null;
     for(const c of p.chapters||[]){
       if(c.collapsed)continue;
       const f=frameRect(p,c,height);if(!f)continue;
       if(x>=f.x&&x<=f.x+f.width&&y>=f.y&&y<=f.y+f.height)hit=c;
+    }
+    return hit;
+  }
+  function frameRectPinnedTop(p,c,height=()=>154,freeze){
+    const live=frameRect(p,c,height);
+    if(!freeze||freeze.chapterId!==c.id)return live;
+    if(!live)return freeze.rect||null;
+    const y=freeze.rect.y;
+    return {x:live.x,y,width:live.width,height:Math.max(live.y+live.height-y,EJECT+48)};
+  }
+  function dropTarget(p,x,y,height=()=>154,opts={}){
+    let hit=null;
+    for(const c of p.chapters||[]){
+      if(c.collapsed)continue;
+      const f=frameRectPinnedTop(p,c,height,opts.freeze);if(!f)continue;
+      if(x<f.x||x>f.x+f.width||y<f.y||y>f.y+f.height)continue;
+      const ejectH=Math.min(EJECT,Math.max(24,f.height*0.3));
+      hit={chapter:c,zone:y<f.y+ejectH?'eject':'inside'};
     }
     return hit;
   }
@@ -42,5 +61,5 @@
   }
   function internal(p,s,t){const a=proxy(p,s),b=proxy(p,t);return a.id===b.id&&a.id!==s.id;}
   function remove(p,id){p.chapters=(p.chapters||[]).filter(c=>c.id!==id);for(const s of p.scenes)if(s.chapter===id)delete s.chapter;}
-  const api={validate,members,bounds,frameRect,atPoint,move,proxy,internal,remove};root.QuestChapters=api;if(typeof module!=='undefined')module.exports=api;
+  const api={EJECT,validate,members,bounds,frameRect,frameRectPinnedTop,atPoint,dropTarget,move,proxy,internal,remove};root.QuestChapters=api;if(typeof module!=='undefined')module.exports=api;
 })(globalThis);

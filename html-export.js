@@ -18,7 +18,7 @@
     let current=quest.start,state=QuestRules.initialState(variables),imageReady=false,hoveredZone=-1;
     const saveControls=QuestSaves.attach({host:$('game-saves'),quest,getState:()=>({scene:current,state}),onLoad:saved=>{current=saved.scene;state=saved.state;$('restart-confirm').hidden=true;render();$('scene-title').focus({preventScroll:true});window.scrollTo({top:0,behavior:'auto'});}});
     let disposeConversation=()=>{};
-    const soundtrack=QuestMusic.createController();
+    const soundtrack=QuestMusic.createController({fadeMs:QuestMusic.fadeMs(quest)});
     const activeScene=()=>quest.scenes.find(s=>s.id===current);
     const result=choice=>QuestRules.transition(choice,variables,state);
     function element(tag,text,className){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(className)node.className=className;return node;}
@@ -78,7 +78,8 @@
     music.validate(source);
     const glossary=source.atlasLinks?{atlasLinks:true,atlasEntries:(source.atlasEntries||[]).map(a=>({id:a.id,title:a.title,summary:a.summary,aliases:a.aliases||[]}))}:{};
     const soundtrack=(source.soundtrack||[]).map(t=>({id:t.id,title:t.title,audio:t.audio}));
-    const quest={version:1,title:source.title,start:source.start,...(source.characters?.length?{characters:source.characters}:{}),...(soundtrack.length?{soundtrack}:{}),variables:source.variables||[],scenes:source.scenes.map(s=>{const action=music.normalizeAction(s.music);return {id:s.id,title:s.title,text:s.text,...(s.dialogue?{dialogue:true}:{}),...(s.speaker?{speaker:s.speaker}:{}),...(s.actors?.length?{actors:s.actors}:{}),...(s.image?{image:s.image}:{}),...(action?{music:action}:{}),choices:s.choices.map(c=>({text:c.text,target:c.target,...(c.check?{check:c.check}:{}),zone:c.zone||[],conditions:c.conditions||[],conditionMode:c.conditionMode||'all',effects:c.effects||[]}))};})};
+    const fade=source.musicFadeMs!==undefined?music.fadeMs(source):undefined;
+    const quest={version:1,title:source.title,start:source.start,...(source.characters?.length?{characters:source.characters}:{}),...(soundtrack.length?{soundtrack}:{}),...(fade!==undefined?{musicFadeMs:fade}:{}),variables:source.variables||[],scenes:source.scenes.map(s=>{const action=music.normalizeAction(s.music);return {id:s.id,title:s.title,text:s.text,...(s.dialogue?{dialogue:true}:{}),...(s.speaker?{speaker:s.speaker}:{}),...(s.actors?.length?{actors:s.actors}:{}),...(s.image?{image:s.image}:{}),...(action?{music:action}:{}),choices:s.choices.map(c=>({text:c.text,target:c.target,...(c.check?{check:c.check}:{}),zone:c.zone||[],conditions:c.conditions||[],conditionMode:c.conditionMode||'all',effects:c.effects||[]}))};})};
     Object.assign(quest,glossary);
     rules.validateVariables(quest.variables);layers.validate(quest);music.validate(quest);
     const ids=new Set(quest.scenes.map(s=>s.id));

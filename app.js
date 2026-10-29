@@ -76,12 +76,15 @@ function renderChoices(){
     const row=el('div','choice'+(i===activeChoice?' active-choice':''));row.style.setProperty('--zone-color',QuestZones.color(i));
     const caption=el('div','choice-caption');caption.append(el('span','zone-dot'),el('strong','',`${s.dialogue?'Ответ':'Действие'} ${i+1}`));
     const input=el('input');input.value=c.text;input.placeholder='Например: открыть дверь';input.setAttribute('aria-label','Текст действия '+(i+1));input.oninput=()=>{c.text=input.value;save();syncZoneTools();drawEdges();};
-    const label=el('label','',s.dialogue?'СЛЕДУЮЩАЯ РЕПЛИКА ИЛИ СЦЕНА':'ПЕРЕХОД В СЦЕНУ');const target=el('select');target.setAttribute('aria-label','Цель действия '+(i+1));
+    const openTarget=el('button','choice-target-link',s.dialogue?'СЛЕДУЮЩАЯ РЕПЛИКА ИЛИ СЦЕНА':'ПЕРЕХОД В СЦЕНУ');openTarget.type='button';openTarget.title='Открыть целевую сцену';
+    openTarget.onclick=()=>{if(c.target)select(c.target);};
+    const target=el('select');target.setAttribute('aria-label','Цель действия '+(i+1));
     QuestService.playable(project).forEach(t=>{const o=el('option','',t.title||'Без названия');o.value=t.id;target.append(o);});target.value=c.target;target.onchange=()=>{c.target=target.value;save();renderGraph();};
-    const controls=el('div','choice-controls');const paint=el('button','','Нарисовать зону');paint.onclick=()=>{activeChoice=i;renderChoices();setSceneTab('image');paintZones();};
+    const controls=el('div','choice-controls');
+    if(project.graphicMode){const paint=el('button','','Нарисовать зону');paint.onclick=()=>{activeChoice=i;renderChoices();setSceneTab('image');paintZones();};controls.append(paint);}
     const conditions=el('button','','Условия и последствия');conditions.onclick=()=>openPathEditor(s,c);
     const remove=el('button','quiet','Удалить действие');remove.onclick=()=>{if(c.zone?.length&&!confirm('Удалить действие вместе с нарисованной зоной?'))return;s.choices.splice(i,1);if(activeChoice>i)activeChoice--;save();renderChoices();renderGraph();paintZones();};
-    controls.append(paint);controls.append(conditions,remove);row.append(caption,input,label,target,el('p','hint',QuestRules.summary(c,project.variables||[])),controls);$('choices').append(row);
+    controls.append(conditions,remove);row.append(caption,input,openTarget,target,el('p','hint',QuestRules.summary(c,project.variables||[])),controls);$('choices').append(row);
     if(c.effects?.length)row.insertBefore(el('p','effect-summary','При переходе: '+QuestRules.effectsSummary(c,project.variables||[])),controls);
   });
   if(!s.choices.length)$('choices').append(el('p','hint',s.dialogue?'Пока нет ответов. Добавьте ответ или следующую реплику.':'Пока нет действий. Добавьте первое действие, чтобы нарисовать его зону.'));
@@ -154,7 +157,7 @@ function renderPlayerChoices(){
 let disposeConversation=()=>{};
 function renderPlayer(){disposeConversation();$('play-roll').textContent='';delete $('play-image-wrap').dataset.failed;const s=project.scenes.find(s=>s.id===playing);$('play-title').textContent=s.title;QuestAtlas.renderText($('play-text'),s.text||'Текст этой сцены ещё не написан.',project);renderPlayerChoices();renderPlayerState();renderPlayerImage(s);previewMusic?.apply(project,s.music);disposeConversation=QuestLayers.conversations($('play-actors'),s,project,{getState:()=>playerState,apply:state=>{playerState=state;previewSaves?.autosave();},travel:(id,message)=>{playing=id;renderPlayer();$('play-roll').textContent=message;previewSaves?.autosave();},refresh:renderPlayer,autoHost:$('play-choices')});$('play-text').hidden=!!s.dialogue;}
 function startPlayer(){
-  previewSaves?.dispose();previewMusic?.dispose();previewMusic=QuestMusic.createController();playing=project.start;playerState=QuestRules.initialState(project.variables||[]);renderPlayer();
+  previewSaves?.dispose();previewMusic?.dispose();previewMusic=QuestMusic.createController({fadeMs:QuestMusic.fadeMs(project)});playing=project.start;playerState=QuestRules.initialState(project.variables||[]);renderPlayer();
   previewSaves=QuestSaves.attach({host:$('preview-saves'),quest:project,namespace:'preview',getState:()=>({scene:playing,state:playerState}),onLoad:saved=>{playing=saved.scene;playerState=saved.state;renderPlayer();$('player').scrollTop=0;}});
 }
 $('player').addEventListener('close',()=>{disposeConversation();previewSaves?.dispose();previewMusic?.stop(true);});

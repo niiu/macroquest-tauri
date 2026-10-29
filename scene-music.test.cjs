@@ -10,6 +10,11 @@ const project={version:1,title:'Музыка',start:'a',soundtrack:[{id:'m1',tit
 ]};
 
 music.validate(project);
+assert.equal(music.fadeMs(project),1500);
+assert.equal(music.fadeMs({musicFadeMs:800}),800);
+assert.equal(music.fadeMs({musicFadeMs:99999}),10000);
+assert.throws(()=>music.validate({...project,musicFadeMs:1.5}),/затухания/);
+assert.throws(()=>music.validate({...project,musicFadeMs:-1}),/затухания/);
 assert.equal(music.normalizeAction(undefined),null);
 assert.equal(music.normalizeAction(null),null);
 assert.deepEqual(music.normalizeAction({track:'m1'}),{track:'m1'});
@@ -56,7 +61,10 @@ assert.equal(data.soundtrack.length,2);
 assert.deepEqual(data.scenes[0].music,{track:'m1'});
 assert.equal(data.scenes[1].music,undefined);
 assert.deepEqual(data.scenes[2].music,{stop:true});
+const withFade=structuredClone(project);withFade.musicFadeMs=900;
+const fadeData=JSON.parse(exporter.build(withFade).match(/<script id="quest-data" type="application\/json">([\s\S]*?)<\/script>/)[1]);
+assert.equal(fadeData.musicFadeMs,900);
 const plain=structuredClone(project);delete plain.soundtrack;plain.scenes.forEach(s=>delete s.music);
 assert.doesNotThrow(()=>exporter.build(plain),'scenes without music still export');
 
-console.log('PASS: scene music validate, same-track keep, stop, HTML soundtrack embed');
+console.log('PASS: scene music validate, same-track keep, stop, fade setting, HTML soundtrack embed');

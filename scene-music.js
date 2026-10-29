@@ -1,11 +1,17 @@
 (function installQuestMusic(root){
   'use strict';
-  const FADE_MS=1500,MAX_BYTES=8*1024*1024;
+  const FADE_MS=1500,FADE_MIN=0,FADE_MAX=10000,MAX_BYTES=8*1024*1024;
   const AUDIO_RE=/^data:audio\/(mpeg|ogg|wav|mp4);base64,[A-Za-z0-9+/]+={0,2}$/;
   function audioBytes(dataUrl){
     const comma=dataUrl.indexOf(',');
     if(comma<0)return Infinity;
     return Math.ceil((dataUrl.length-comma-1)*3/4);
+  }
+  function fadeMs(project){
+    const value=project&&project.musicFadeMs;
+    if(value===undefined||value===null)return FADE_MS;
+    if(typeof value!=='number'||!Number.isFinite(value))return FADE_MS;
+    return Math.max(FADE_MIN,Math.min(FADE_MAX,Math.round(value)));
   }
   function normalizeAction(music){
     if(music===undefined||music===null)return null;
@@ -15,6 +21,9 @@
     return false;
   }
   function validate(project){
+    if(project.musicFadeMs!==undefined){
+      if(typeof project.musicFadeMs!=='number'||!Number.isFinite(project.musicFadeMs)||project.musicFadeMs<FADE_MIN||project.musicFadeMs>FADE_MAX||!Number.isInteger(project.musicFadeMs))throw Error('Некорректное время затухания музыки.');
+    }
     if(project.soundtrack!==undefined){
       if(!Array.isArray(project.soundtrack)||project.soundtrack.length>200)throw Error('Некорректная библиотека музыки.');
       const ids=new Set();
@@ -35,9 +44,9 @@
   function trackById(project,id){return (project.soundtrack||[]).find(t=>t.id===id)||null;}
   function createController(options={}){
     const AudioCtor=options.Audio||(typeof root.Audio!=='undefined'?root.Audio:typeof Audio!=='undefined'?Audio:null);
-    const fadeMs=options.fadeMs??FADE_MS;
     const now=options.now||(()=>Date.now());
     let current=null,currentId=null,token=0,raf=0;
+    const resolveFade=()=>options.fadeMs!=null?Math.max(FADE_MIN,Math.min(FADE_MAX,Math.round(Number(options.fadeMs)||0))):FADE_MS;
     function clearFade(){if(raf&&typeof root.cancelAnimationFrame==='function')root.cancelAnimationFrame(raf);raf=0;}
     function stopImmediate(){
       clearFade();token++;
@@ -46,7 +55,7 @@
     }
     function fadeTo(audio,from,to,done){
       clearFade();
-      const start=now(),span=Math.max(1,fadeMs);
+      const start=now(),span=Math.max(1,resolveFade());
       audio.volume=from;
       const step=()=>{
         const t=Math.min(1,(now()-start)/span);
@@ -100,14 +109,15 @@
       return {changed:true,action,trackId:action.track};
     }
     return {
-      FADE_MS:fadeMs,
+      get FADE_MS(){return resolveFade();},
       get trackId(){return currentId;},
+      setFadeMs(ms){options.fadeMs=ms;},
       apply,
       stop,
       dispose:stopImmediate
     };
   }
-  const api={FADE_MS,MAX_BYTES,AUDIO_RE,audioBytes,normalizeAction,validate,trackById,createController};
+  const api={FADE_MS,FADE_MIN,FADE_MAX,MAX_BYTES,AUDIO_RE,audioBytes,fadeMs,normalizeAction,validate,trackById,createController};
   api.standaloneSource=()=>`(${installQuestMusic.toString()})(globalThis);`;
   if(typeof module!=='undefined')module.exports=api;else root.QuestMusic=api;
 })(globalThis);

@@ -37,3 +37,17 @@ test('atPoint detects expanded chapter space and ignores collapsed',()=>{
   p.chapters[1].collapsed=false;
   assert.equal(chapters.atPoint(p,710,410,h)?.id,'two');
 });
+test('dropTarget uses header eject zone and inside join zone',()=>{
+  const p=sample(),h=()=>154,frame=chapters.frameRect(p,p.chapters[0],h);
+  const inside=chapters.dropTarget(p,frame.x+frame.width/2,frame.y+frame.height/2,h);
+  assert.equal(inside?.zone,'inside');assert.equal(inside?.chapter.id,'one');
+  const eject=chapters.dropTarget(p,frame.x+frame.width/2,frame.y+8,h);
+  assert.equal(eject?.zone,'eject');assert.equal(eject?.chapter.id,'one');
+  const frozen={chapterId:'one',rect:{...frame}};
+  assert.equal(chapters.dropTarget(p,frame.x+frame.width/2,frame.y+8,h,{freeze:frozen})?.zone,'eject');
+  p.scenes[0].y+=80;p.scenes[1].y+=80;
+  const pinned=chapters.frameRectPinnedTop(p,p.chapters[0],h,frozen);
+  assert.equal(pinned.y,frame.y,'top edge stays pinned while dragging');
+  assert.ok(pinned.height>frame.height,'frame still stretches downward');
+  assert.equal(chapters.dropTarget(p,0,0,h),null);
+});

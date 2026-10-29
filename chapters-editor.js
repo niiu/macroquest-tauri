@@ -40,11 +40,10 @@ function toggleChapter(c){cancelConnection();c.collapsed=!c.collapsed;save();ren
 function memberHeight(s){return QuestService.isNote(s)?120:nodeHeight(s);}
 function dragChapter(e,c,frame){
   if(e.button!==0||connectionSource||e.target.closest('.chapter-settings'))return;
-  // Do not preventDefault: that cancels the click on .chapter-toggle (collapse/expand).
   e.stopPropagation();
+  const fromToggle=!!e.target.closest('.chapter-toggle');
   const list=QuestChapters.members(project,c),origins=list.map(s=>({s,x:s.x,y:s.y}));
   const startX=e.clientX,startY=e.clientY,size=QuestGraphArea.bounds(project,nodeHeight);let moved=false;
-  frame.setPointerCapture(e.pointerId);
   const apply=(dx,dy)=>{
     let adx=dx,ady=dy;
     for(const {s,x,y} of origins){
@@ -63,14 +62,21 @@ function dragChapter(e,c,frame){
     drawEdges();requestMinimap();
   };
   frame.onpointermove=ev=>{
-    if(Math.hypot(ev.clientX-startX,ev.clientY-startY)>5)moved=true;
-    if(!moved)return;
+    if(Math.hypot(ev.clientX-startX,ev.clientY-startY)<=5)return;
+    if(!moved){
+      moved=true;
+      try{frame.setPointerCapture(e.pointerId);}catch(err){}
+    }
     apply((ev.clientX-startX)/zoom,(ev.clientY-startY)/zoom);
   };
   const end=ev=>{
     frame.onpointermove=frame.onpointerup=frame.onpointercancel=null;
     if(frame.hasPointerCapture(e.pointerId))frame.releasePointerCapture(e.pointerId);
-    if(!moved)return;
+    if(!moved){
+      // WebView2 often skips button click after chrome pointer handlers; toggle here instead.
+      if(fromToggle&&ev.type!=='pointercancel'){frame.dataset.skipToggleClick='1';toggleChapter(c);}
+      return;
+    }
     frame.dataset.suppressUntil=String(performance.now()+350);
     if(ev.type==='pointercancel'){
       for(const {s,x,y} of origins){s.x=x;s.y=y;const n=document.querySelector('#nodes [data-scene-id="'+s.id+'"]');if(n){n.style.left=x+'px';n.style.top=y+'px';}}
@@ -82,15 +88,25 @@ function dragChapter(e,c,frame){
 function renderChapterFrames(){
   document.querySelectorAll('#nodes .chapter-frame,#nodes .chapter-card').forEach(n=>n.remove());
   for(const c of project.chapters||[]){
-    const rect=QuestChapters.frameRect(project,c,memberHeight);if(!rect)continue;
+    const rect=QuestChapters.frameRectPinnedTop?QuestChapters.frameRectPinnedTop(project,c,memberHeight,typeof chapterFrameFreeze!=='undefined'?chapterFrameFreeze:null):QuestChapters.frameRect(project,c,memberHeight);
+    if(!rect)continue;
     const count=QuestChapters.members(project,c).length,frame=el('div',c.collapsed?'chapter-card':'chapter-frame');frame.dataset.chapterId=c.id;
     frame.style.left=rect.x+'px';frame.style.top=rect.y+'px';
     if(!c.collapsed){frame.style.width=rect.width+'px';frame.style.height=rect.height+'px';}
     const chrome=el('div','chapter-chrome');chrome.title='Перетащите, чтобы переместить главу';
     const toggle=el('button','chapter-toggle',`${c.collapsed?'▸':'▾'} ${c.title} · ${count}`);toggle.setAttribute('aria-label',(c.collapsed?'Развернуть главу: ':'Свернуть главу: ')+c.title);toggle.setAttribute('aria-expanded',String(!c.collapsed));
-    toggle.onclick=e=>{if(performance.now()<Number(frame.dataset.suppressUntil||0)){e.preventDefault();return;}toggleChapter(c);};
+    toggle.onclick=e=>{
+      if(frame.dataset.skipToggleClick){delete frame.dataset.skipToggleClick;e.preventDefault();return;}
+      if(performance.now()<Number(frame.dataset.suppressUntil||0)){e.preventDefault();return;}
+      toggleChapter(c);
+    };
     const edit=el('button','chapter-settings','⋯');edit.setAttribute('aria-label','Настроить главу: '+c.title);edit.onclick=e=>{e.stopPropagation();openChapters(c.id);};
     chrome.append(toggle,edit);chrome.onpointerdown=e=>dragChapter(e,c,frame);frame.append(chrome);
+    if(!c.collapsed){
+      const eject=el('div','chapter-eject-zone');eject.setAttribute('aria-hidden','true');
+      eject.style.height=Math.min(QuestChapters.EJECT||36,Math.max(24,rect.height*0.3))+'px';
+      frame.append(eject);
+    }
     if(c.collapsed)frame.append(el('p','hint','Сцены скрыты · связи сохранены'));$('nodes').prepend(frame);
   }
 }

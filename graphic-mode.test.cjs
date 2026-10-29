@@ -9,7 +9,8 @@ class Node{
 test('graphic mode moves original fields, folds them, restores order and isolates quest settings',()=>{
   const body=new Node(),ids={},selectors={};for(const key of ['actions','dialogue','text','image','answers','choices']){const n=new Node();n.value=key;body.append(n);selectors[key]=n;}
   Object.assign(ids,{'editor-body':body,'dialogue-editor':selectors.dialogue,'dialogue-choice-editor':selectors.answers});
-  const doc={createComment:()=>new Node(),querySelector:s=>s==='.scene-actions'?selectors.actions:selectors[s.match(/"(.*?)"/)[1]]};
+  const panels=Object.values(selectors).filter(n=>['text','image','choices'].includes(n.value)).map(n=>{n.dataset={editorPanel:n.value};n.hidden=false;return n;});
+  const doc={createComment:()=>new Node(),querySelector:s=>s==='.scene-actions'?selectors.actions:selectors[s.match(/"(.*?)"/)[1]],querySelectorAll:()=>panels};
   const first={graphicMode:true},second={graphicMode:false},context={document:doc,$:id=>ids[id],el:()=>new Node(),project:first,selected:'s1',save:()=>{}};
   vm.createContext(context);vm.runInContext(fs.readFileSync('graphic-mode.js','utf8')+';globalThis.api={update:updateGraphicMode,layout:graphicLayout,text:graphicText,choices:graphicChoices};',context);
   context.api.update();assert.deepEqual(context.api.layout.children,[selectors.image,context.api.text,context.api.choices]);assert.equal(context.api.text.open,false);
