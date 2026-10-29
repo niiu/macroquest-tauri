@@ -40,7 +40,8 @@ function toggleChapter(c){cancelConnection();c.collapsed=!c.collapsed;save();ren
 function memberHeight(s){return QuestService.isNote(s)?120:nodeHeight(s);}
 function dragChapter(e,c,frame){
   if(e.button!==0||connectionSource||e.target.closest('.chapter-settings'))return;
-  e.preventDefault();e.stopPropagation();
+  // Do not preventDefault: that cancels the click on .chapter-toggle (collapse/expand).
+  e.stopPropagation();
   const list=QuestChapters.members(project,c),origins=list.map(s=>({s,x:s.x,y:s.y}));
   const startX=e.clientX,startY=e.clientY,size=QuestGraphArea.bounds(project,nodeHeight);let moved=false;
   frame.setPointerCapture(e.pointerId);
