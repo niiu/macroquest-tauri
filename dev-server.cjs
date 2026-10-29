@@ -1,7 +1,7 @@
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
-const files = new Set(['vendor/toastui-editor-dark.css', 'actor-dialogue.js', 'actor-dialogue-editor.js', 'chapters.js', 'chapters-editor.js','graph-selection.js', 'pointer-drag.js', 'graphic-mode.js', 'diagnostics.js', 'workspace.js', 'workspace.css','editor-settings.css','editor-settings.js', 'atlas.js', 'vendor/toastui-editor.min.css', 'vendor/toastui-editor-all.min.js', 'index.html', 'demo-quest.json', 'app.js', 'image-editor.js', 'graph-editor.js','graph-area.js','graph-navigation.js', 'path-editor.js', 'rules.js', 'zones.js', 'storage.js', 'saves.js','scene-layers.js','character-editor.js', 'html-export.js', 'style.css']);
+const files = new Set(['vendor/toastui-editor-dark.css', 'actor-dialogue.js', 'actor-dialogue-editor.js', 'chapters.js', 'chapters-editor.js','graph-selection.js', 'pointer-drag.js', 'graphic-mode.js', 'diagnostics.js', 'workspace.js', 'workspace.css','editor-settings.css','editor-settings.js','graph-hotkeys.js','graph-context-menu.js','editor-hotkeys.js','service-nodes.js','note-editor.js', 'atlas.js', 'vendor/toastui-editor.min.css', 'vendor/toastui-editor-all.min.js', 'index.html', 'demo-quest.json', 'app.js', 'image-editor.js', 'graph-editor.js','graph-area.js','graph-navigation.js', 'path-editor.js', 'rules.js', 'zones.js', 'storage.js', 'saves.js','scene-layers.js','character-editor.js', 'html-export.js', 'style.css']);
 const types = {'.html':'text/html', '.json':'application/json', '.js':'text/javascript', '.css':'text/css'};
 http.createServer((request, response) => {
   const name = new URL(request.url, 'http://localhost').pathname.slice(1) || 'index.html';

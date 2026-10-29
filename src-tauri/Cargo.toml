@@ -1,6 +1,6 @@
 [package]
 name = "macroquest"
-version = "0.2.21"
+version = "0.2.25"
 edition = "2021"
 
 [build-dependencies]

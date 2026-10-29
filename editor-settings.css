@@ -5,6 +5,10 @@ body,button,input,select,textarea,label,p,small,.field,.hint,.eyebrow,.mono,.sce
 h2,h3,.node h3,.settings-workspace h3{font-size:var(--font-medium)!important}
 h1,.atlas-sidebar h1,.settings-workspace h1{font-size:var(--font-large)!important}
 .settings-workspace{max-width:900px;padding:30px;margin:auto}.settings-workspace fieldset{border:1px solid var(--line);padding:22px;margin:20px 0;border-radius:8px}.settings-workspace .field{max-width:350px}.settings-workspace .toggle{display:block;margin:14px 0}.settings-workspace select{width:100%;padding:10px}.font-preview{padding:16px;border:1px solid var(--line);border-radius:6px}.settings-workspace #font-preview-base{font-size:var(--font-base)!important}
+.settings-tabs{display:flex;gap:8px;margin:18px 0 8px;flex-wrap:wrap}.settings-tabs button[aria-pressed=true]{background:var(--hover);color:var(--accent);border-color:var(--accent)}
+.hotkeys-list{display:flex;flex-direction:column;gap:4px;margin-top:12px}.hotkey-group{margin:14px 0}.hotkey-row{display:grid;grid-template-columns:minmax(160px,1.5fr) minmax(110px,.9fr) auto auto auto;gap:8px;align-items:center;margin:8px 0}.hotkey-value{padding:8px 10px;border:1px solid var(--line);border-radius:5px;background:var(--input);min-height:38px;display:flex;align-items:center}
+.graph-context-menu{position:fixed;z-index:40;min-width:160px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 8px 24px #0008;display:flex;flex-direction:column;gap:4px}.graph-context-menu button{text-align:left;width:100%}
+@media(max-width:720px){.hotkey-row{grid-template-columns:1fr 1fr;}.hotkey-label{grid-column:1/-1}}
 body,.workspace,.graph-section,.atlas-content{background:var(--bg);color:var(--text)}
 .topbar,.sidebar,.inspector,.workspace-tabs,.atlas-sidebar,dialog,.toastui-editor-defaultUI,.toastui-editor-defaultUI-toolbar{background:var(--panel)!important;color:var(--text);border-color:var(--line)!important}
 button,.node,.choice,.chapter-card,.graphic-fold,.atlas-text-preview,.toastui-editor-contents{background-color:var(--surface);color:var(--text);border-color:var(--line)}

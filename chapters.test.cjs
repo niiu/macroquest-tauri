@@ -15,3 +15,25 @@ test('removing a chapter keeps scenes, NPC links and transitions',()=>{
   const p=sample();p.scenes[0].actors=[{dialogue:'b'}];chapters.remove(p,'one');chapters.validate(p);
   assert.equal(p.scenes.length,3);assert.equal(p.scenes[0].chapter,undefined);assert.equal(p.scenes[1].chapter,undefined);assert.equal(p.scenes[2].chapter,'two');assert.equal(p.scenes[0].choices[0].target,'b');assert.equal(p.scenes[0].actors[0].dialogue,'b');
 });
+test('chapter bounds and members include notes',()=>{
+  const p=sample(),Service=require('./service-nodes.js');
+  const note=Service.createNote({x:10,y:40});note.target='a';note.chapter='one';p.scenes.push(note);
+  chapters.validate(p);Service.validate(p);
+  assert.equal(chapters.members(p,p.chapters[0]).length,3);
+  const box=chapters.bounds(p,p.chapters[0],()=>154);
+  assert.equal(box.x,10);assert.equal(box.y,40);
+});
+test('move shifts all chapter members together',()=>{
+  const p=sample();chapters.move(p,p.chapters[0],30,-10);
+  assert.equal(p.scenes[0].x,80);assert.equal(p.scenes[0].y,50);
+  assert.equal(p.scenes[1].x,380);assert.equal(p.scenes[1].y,70);
+  assert.equal(p.scenes[2].x,700);
+});
+test('atPoint detects expanded chapter space and ignores collapsed',()=>{
+  const p=sample(),h=()=>154;
+  const hit=chapters.atPoint(p,60,70,h);
+  assert.equal(hit?.id,'one');
+  assert.equal(chapters.atPoint(p,710,410,h),null);
+  p.chapters[1].collapsed=false;
+  assert.equal(chapters.atPoint(p,710,410,h)?.id,'two');
+});

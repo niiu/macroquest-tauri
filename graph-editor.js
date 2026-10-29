@@ -16,6 +16,7 @@ function deleteScene(id){
   project.scenes=project.scenes.filter(s=>s!==removed);
   if(project.start===id)project.start=playableLeft[0].id;
   if(selected===id)selected=project.start;
+  QuestService.syncNoteChapters(project);
   save();render();undoScene.hidden=false;$('graph-status').textContent=(QuestService.isNote(removed)?'Заметка удалена':'Сцена удалена')+'. Её можно вернуть кнопкой рядом.';
 }
 undoScene.onclick=()=>{
@@ -26,6 +27,7 @@ undoScene.onclick=()=>{
     try{QuestRules.validateChoice(p.choice,project.variables||[]);p.source.choices.splice(Math.min(p.index,p.source.choices.length),0,p.choice);}catch(e){}
   }
   for(const entry of last.notes||[])if(project.scenes.includes(entry.note)&&project.scenes.some(s=>s.id===entry.target&&!QuestService.isService(s)))entry.note.target=entry.target;
+  QuestService.syncNoteChapters(project);
   project.start=last.start;selected=last.scene.id;lastDeletedScene=null;save();render();
 };
 function moveScene(id,before,after=false){
@@ -47,7 +49,7 @@ function disconnectDialogue(source,actor){
 }
 function nodeHeight(s){return Math.max(typeof editorNodeHeight==='function'?editorNodeHeight():154,96+(incomingPaths(s.id).length-1)*28);}
 function disconnectPath(source,choice){
-  if(QuestService.isNote(source)&&choice===source){lastDisconnected={project,source,note:true,target:source.target||''};source.target='';save();renderGraph();renderInspector();$('graph-status').textContent='Заметка отключена от сцены.';return;}
+  if(QuestService.isNote(source)&&choice===source){lastDisconnected={project,source,note:true,target:source.target||''};source.target='';QuestService.syncNoteChapters(project);save();renderGraph();renderInspector();$('graph-status').textContent='Заметка отключена от сцены.';return;}
   const index=source.choices.indexOf(choice);if(index<0)return;
   lastDisconnected={project,source,choice,index};source.choices.splice(index,1);
   save();renderGraph();renderInspector();
@@ -56,7 +58,7 @@ function disconnectPath(source,choice){
 undoDisconnect.onclick=()=>{
   const last=lastDisconnected;lastDisconnected=null;
   if(!last||last.project!==project||!project.scenes.includes(last.source))return;
-  if(last.note){if(last.target&&project.scenes.some(s=>s.id===last.target&&!QuestService.isService(s))){last.source.target=last.target;save();renderGraph();renderInspector();}return;}
+  if(last.note){if(last.target&&project.scenes.some(s=>s.id===last.target&&!QuestService.isService(s))){last.source.target=last.target;QuestService.syncNoteChapters(project);save();renderGraph();renderInspector();}return;}
   if(last.actor){if(last.source.actors?.includes(last.actor)&&!last.actor.dialogue&&project.scenes.some(s=>s.id===last.target&&s.dialogue)){last.actor.dialogue=last.target;save();renderGraph();renderInspector();}return;}
   if(!project.scenes.some(s=>s.id===last.choice.target))return;
   try{QuestRules.validateChoice(last.choice,project.variables||[]);}catch(e){renderGraph();$('graph-status').textContent='Путь нельзя вернуть: один из его параметров удалён.';return;}
@@ -144,9 +146,10 @@ function renderGraph(){
 }
 function svgEl(name,attributes){const n=document.createElementNS('http://www.w3.org/2000/svg',name);for(const [k,v] of Object.entries(attributes))n.setAttribute(k,v);return n;}
 function edgeGeometry(s,t,lane,choice){
-  if(typeof QuestChapters!=='undefined'&&!QuestService.isService(s)&&!QuestService.isService(t)){s=QuestChapters.proxy(project,s);t=QuestChapters.proxy(project,t);}
+  const outY=QuestService.isNote(s)?60:76;
+  if(typeof QuestChapters!=='undefined'){s=QuestChapters.proxy(project,s);t=QuestChapters.proxy(project,t);}
   const inputIndex=incomingPaths(t.id).findIndex(p=>p.choice===choice);
-  const x=s.x+220,y=s.y+(QuestService.isNote(s)?60:76),tx=t.x,ty=t.y+76+Math.max(0,inputIndex)*28,offset=lane*30;
+  const x=s.x+220,y=s.y+outY,tx=t.x,ty=t.y+76+Math.max(0,inputIndex)*28,offset=lane*30;
   if(s.id===t.id){const top=Math.max(8,s.y-48-offset);return {d:`M ${x} ${y} C ${x+100} ${y}, ${x+95} ${top}, ${s.x+110} ${top} C ${s.x-85} ${top}, ${s.x-85} ${ty}, ${tx} ${ty}`,lx:s.x+110,ly:top};}
   if(tx<x){const bottom=Math.max(s.y+nodeHeight(s),t.y+nodeHeight(t))+51+offset;return {d:`M ${x} ${y} C ${x+95} ${y}, ${x+95} ${bottom}, ${x} ${bottom} L ${tx} ${bottom} C ${tx-65} ${bottom}, ${tx-65} ${ty}, ${tx} ${ty}`,lx:(x+tx)/2,ly:bottom};}
   const bend=Math.max(55,(tx-x)*.5),cy=y+offset,cty=ty+offset;
@@ -159,6 +162,7 @@ function drawEdges(){
     const lanes=new Map();
     if(QuestService.isNote(s)){
       const t=project.scenes.find(n=>n.id===s.target&&!QuestService.isService(n));if(!t)continue;
+      if(typeof QuestChapters!=='undefined'&&QuestChapters.internal(project,s,t))continue;
       const lane=lanes.get(t.id)||0;lanes.set(t.id,lane+1);const g=edgeGeometry(s,t,lane,s);
       svg.append(svgEl('path',{d:g.d,fill:'none',stroke:'#d4b56a','stroke-width':2,'stroke-dasharray':'5 4','marker-end':'url(#path-arrow)'}));
       const open=e=>{e.stopPropagation();if(!connectionSource)openNoteEditor(s.id);};
@@ -215,7 +219,7 @@ function completeConnection(target){
   const dest=project.scenes.find(s=>s.id===target);if(!dest)return;
   if(QuestService.isNote(source)){
     if(QuestService.isService(dest)){$('graph-status').textContent='Заметку можно прикрепить только к обычной сцене.';return;}
-    source.target=dest.id;save();renderGraph();renderInspector();$('graph-status').textContent='Заметка прикреплена к «'+dest.title+'».';return;
+    source.target=dest.id;QuestService.syncNoteChapters(project);save();renderGraph();renderInspector();$('graph-status').textContent='Заметка прикреплена к «'+dest.title+'».';return;
   }
   if(QuestService.isService(dest)){$('graph-status').textContent='Игровой путь нельзя вести на служебную ноду.';return;}
   openPathEditor(source,null,target);
@@ -227,6 +231,7 @@ function createConnectedScene(clientX,clientY){
   const rect=$('graph').getBoundingClientRect();
   const position=QuestGraphArea.position(QuestGraphArea.bounds(project,nodeHeight),(clientX-rect.left)/zoom-110,(clientY-rect.top)/zoom-76);
   const next={id:'s'+crypto.randomUUID(),title:source.dialogue?'Следующая реплика':'Новая сцена',text:'',...position,choices:[]};
+  if(typeof assignChapterAt==='function')assignChapterAt(next,clientX,clientY);
   if(source.dialogue){next.dialogue=true;next.speaker=source.speaker||'';QuestLayers.inheritArtwork(source,next);}
   const choice={text:source.dialogue?'Продолжить разговор':'Перейти в новую сцену',target:next.id,zone:[]};
   project.scenes.push(next);source.choices.push(choice);activeChoice=source.choices.length-1;

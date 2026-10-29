@@ -90,8 +90,37 @@ $('quest-title').oninput=e=>{project.title=e.target.value;document.querySelector
 $('scene-title').oninput=e=>{scene().title=e.target.value;$('scene-heading').textContent=scene().title||'Сцена без названия';save();renderGraph();renderChoices();};
 $('scene-dialogue').onchange=e=>{scene().dialogue=e.target.checked;save();renderGraph();renderInspector();};
 $('scene-text').oninput=e=>{scene().text=e.target.value;save();renderGraph();renderAtlasTextPreview();if(typeof updateGraphicMode==='function')updateGraphicMode();};
-$('add-scene').onclick=()=>{if(project.scenes.length>=500)return alert('Максимум 500 узлов в одном квесте.');const viewport=$('graph-viewport'),position=QuestGraphArea.position(QuestGraphArea.bounds(project,nodeHeight),(viewport.scrollLeft+viewport.clientWidth/2)/zoom-110,(viewport.scrollTop+viewport.clientHeight/2)/zoom-77);const s={id:'s'+crypto.randomUUID(),title:'Новая сцена',text:'',...position,choices:[]};project.scenes.push(s);save();setSceneTab('text');select(s.id);$('scene-title').focus({preventScroll:true});};
-$('add-note').onclick=()=>{if(project.scenes.length>=500)return alert('Максимум 500 узлов в одном квесте.');const viewport=$('graph-viewport'),position=QuestGraphArea.position(QuestGraphArea.bounds(project,nodeHeight),(viewport.scrollLeft+viewport.clientWidth/2)/zoom-110,(viewport.scrollTop+viewport.clientHeight/2)/zoom-60);const note=QuestService.createNote(position);project.scenes.push(note);save();selected=note.id;renderGraph();openNoteEditor(note.id);};
+function graphClientToPosition(clientX,clientY,offsetX=110,offsetY=77){
+  const graph=$('graph'),r=graph.getBoundingClientRect();
+  return QuestGraphArea.position(QuestGraphArea.bounds(project,nodeHeight),(clientX-r.left)/zoom-offsetX,(clientY-r.top)/zoom-offsetY);
+}
+function graphViewportCenterClient(){
+  const viewport=$('graph-viewport'),r=viewport.getBoundingClientRect();
+  return {x:r.left+r.width/2,y:r.top+r.height/2};
+}
+function chapterAtClient(clientX,clientY){
+  if(typeof QuestChapters==='undefined')return null;
+  const graph=$('graph'),r=graph.getBoundingClientRect();
+  return QuestChapters.atPoint(project,(clientX-r.left)/zoom,(clientY-r.top)/zoom,s=>QuestService.isNote(s)?120:nodeHeight(s));
+}
+function assignChapterAt(node,clientX,clientY){
+  const chapter=chapterAtClient(clientX,clientY);
+  if(chapter)node.chapter=chapter.id;else delete node.chapter;
+}
+function createSceneAt(clientX,clientY){
+  if(project.scenes.length>=500){alert('Максимум 500 узлов в одном квесте.');return null;}
+  const position=graphClientToPosition(clientX,clientY,110,77);
+  const s={id:'s'+crypto.randomUUID(),title:'Новая сцена',text:'',...position,choices:[]};
+  assignChapterAt(s,clientX,clientY);
+  project.scenes.push(s);save();setSceneTab('text');select(s.id);$('scene-title').focus({preventScroll:true});return s;
+}
+function createNoteAt(clientX,clientY){
+  if(project.scenes.length>=500){alert('Максимум 500 узлов в одном квесте.');return null;}
+  const position=graphClientToPosition(clientX,clientY,110,60);
+  const note=QuestService.createNote(position);assignChapterAt(note,clientX,clientY);project.scenes.push(note);save();selected=note.id;renderGraph();openNoteEditor(note.id);return note;
+}
+$('add-scene').onclick=()=>{const c=graphViewportCenterClient();createSceneAt(c.x,c.y);};
+$('add-note').onclick=()=>{const c=graphViewportCenterClient();createNoteAt(c.x,c.y);};
 $('add-choice').onclick=()=>openPathEditor(scene(),null,project.scenes.find(s=>s.id!==selected)?.id||selected);
 $('set-start').onclick=()=>{project.start=selected;save();render();};
 $('delete-scene').onclick=()=>deleteScene(selected);

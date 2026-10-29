@@ -13,6 +13,13 @@
   function createNote(position={}){
     return {id:'n'+((typeof crypto!=='undefined'&&crypto.randomUUID)?crypto.randomUUID():Date.now().toString(36)),service:SERVICES.note,title:'Заметка',text:'',markdown:'',target:'',choices:[],x:position.x||70,y:position.y||75};
   }
+  function syncNoteChapters(project){
+    for(const s of project.scenes||[]){
+      if(!isNote(s)||!s.target)continue;
+      const t=(project.scenes||[]).find(n=>n.id===s.target);
+      if(t&&t.chapter)s.chapter=t.chapter;else delete s.chapter;
+    }
+  }
   function validate(project){
     const scenes=project.scenes||[],ids=new Set(scenes.map(s=>s.id));
     const playableScenes=playable(project);
@@ -28,7 +35,7 @@
       if(typeof s.markdown!=='string'||s.markdown.length>1000000)throw Error('Некорректный текст заметки.');
       if(s.target!==''&&s.target!==undefined&&(typeof s.target!=='string'||!ids.has(s.target)||isService(scenes.find(n=>n.id===s.target))))throw Error('Заметка должна ссылаться на обычную сцену.');
       if(!Array.isArray(s.choices)||s.choices.length)throw Error('У заметки не бывает игровых переходов.');
-      if(s.dialogue||s.image||(s.actors&&s.actors.length)||s.chapter)throw Error('Заметка не может быть диалогом, картинкой или частью главы.');
+      if(s.dialogue||s.image||(s.actors&&s.actors.length))throw Error('Заметка не может быть диалогом или картинкой.');
     }
   }
   function forExport(project){
@@ -36,6 +43,6 @@
     copy.scenes=copy.scenes.filter(s=>!isService(s));
     return copy;
   }
-  const api={SERVICES,isNote,isService,playable,notesFor,preview,createNote,validate,forExport};
+  const api={SERVICES,isNote,isService,playable,notesFor,preview,createNote,syncNoteChapters,validate,forExport};
   if(typeof module!=='undefined')module.exports=api;else root.QuestService=api;
 })(globalThis);

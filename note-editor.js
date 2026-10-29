@@ -45,7 +45,7 @@ function renderSceneNotes(){
     if(project.scenes.length>=500)return alert('Максимум 500 узлов в одном квесте.');
     const viewport=$('graph-viewport'),position=QuestGraphArea.position(QuestGraphArea.bounds(project,nodeHeight),(viewport.scrollLeft+80)/zoom,(viewport.scrollTop+viewport.clientHeight/2)/zoom-60);
     const note=QuestService.createNote({x:Math.max(20,(s.x||70)-260),y:s.y||position.y||75});
-    note.target=s.id;project.scenes.push(note);save();renderGraph();openNoteEditor(note.id);
+    note.target=s.id;project.scenes.push(note);QuestService.syncNoteChapters(project);save();renderGraph();openNoteEditor(note.id);
   };
   host.append(add);
 }
