@@ -119,7 +119,7 @@ function renderGraph(){
     if(!note)top.append(el('span','',String(i+1).padStart(2,'0')));
     const body=el('div','node-body');
     if(note)body.append(el('h3','',s.title||'Заметка'),el('p','',QuestService.preview(s)),el('div','node-count',s.target?'→ '+(project.scenes.find(n=>n.id===s.target)?.title||'сцена'):'Не подключена'));
-    else{const noteCount=QuestService.notesFor(project,s.id).length;body.append(el('h3','',s.title||'Без названия'),el('p','',s.text||'Здесь начинается история…'),el('div','node-count',`${s.choices.length} переходов${dialogueLinks(s).length?' · ☏ '+dialogueLinks(s).length+' диалогов':''}${noteCount?' · ✎ '+noteCount:''}${s.image?' · ▧ картинка':''}`));}
+    else{const noteCount=QuestService.notesFor(project,s.id).length;const musicMark=s.music?.stop?' · ♪ стоп':s.music?.track?' · ♪':'';body.append(el('h3','',s.title||'Без названия'),el('p','',s.text||'Здесь начинается история…'),el('div','node-count',`${s.choices.length} переходов${dialogueLinks(s).length?' · ☏ '+dialogueLinks(s).length+' диалогов':''}${noteCount?' · ✎ '+noteCount:''}${s.image?' · ▧ картинка':''}${musicMark}`));}
     card.append(top,body);
     card.onclick=()=>{if(performance.now()<Number(node.dataset.suppressUntil||0))return;if(connectionSource)completeConnection(s.id);else if(note){selected=s.id;renderGraph();openNoteEditor(s.id);}else select(s.id);};
     card.ondblclick=e=>{if(note){e.preventDefault();e.stopPropagation();openNoteEditor(s.id);}};

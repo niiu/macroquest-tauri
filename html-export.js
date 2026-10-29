@@ -6,6 +6,7 @@
   const layers=typeof module!=='undefined'?require('./scene-layers.js'):root.QuestLayers;
   const saves=typeof module!=='undefined'?require('./saves.js'):root.QuestSaves;
   const service=typeof module!=='undefined'?require('./service-nodes.js'):root.QuestService;
+  const music=typeof module!=='undefined'?require('./scene-music.js'):root.QuestMusic;
   const escapeHTML=text=>String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const safeJSON=value=>JSON.stringify(value).replace(/[<>&\u2028\u2029]/g,c=>'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'));
 
@@ -17,6 +18,7 @@
     let current=quest.start,state=QuestRules.initialState(variables),imageReady=false,hoveredZone=-1;
     const saveControls=QuestSaves.attach({host:$('game-saves'),quest,getState:()=>({scene:current,state}),onLoad:saved=>{current=saved.scene;state=saved.state;$('restart-confirm').hidden=true;render();$('scene-title').focus({preventScroll:true});window.scrollTo({top:0,behavior:'auto'});}});
     let disposeConversation=()=>{};
+    const soundtrack=QuestMusic.createController();
     const activeScene=()=>quest.scenes.find(s=>s.id===current);
     const result=choice=>QuestRules.transition(choice,variables,state);
     function element(tag,text,className){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(className)node.className=className;return node;}
@@ -60,6 +62,7 @@
       image.onload=()=>{if(activeScene()!==scene)return;canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;imageReady=true;drawZones();};
       image.onerror=()=>{if(activeScene()!==scene)return;imageReady=false;$('image-wrap').hidden=true;$('image-error').hidden=false;for(const c of scene.choices.filter(c=>!scene.dialogue&&QuestLayers.onImage(c))){const b=element('button',c.text,'choice');b.disabled=!result(c).ok;b.onclick=()=>take(c);$('choices').append(b);}};
       if(scene.image){image.alt=scene.title||'Локация';image.src=scene.image;}else image.removeAttribute('src');
+      soundtrack.apply(quest,scene.music);
     }
     $('zones').onclick=e=>{const choice=hit(e);if(choice)take(choice);};
     $('zones').onpointermove=e=>{const choice=hit(e),availability=choice?result(choice):null;const index=activeScene().choices.indexOf(choice);if(index!==hoveredZone){hoveredZone=index;drawZones();}QuestLayers.hover($('image-paths'),activeScene(),index);$('zones').style.cursor=!choice?'default':availability.ok?'pointer':'not-allowed';$('hotspot').textContent=!choice?'Выберите область на изображении':availability.ok?choice.text:'🔒 '+choice.text+' · '+availability.reason;};
@@ -67,15 +70,17 @@
     $('show-zones').onchange=drawZones;
     $('restart').onclick=()=>{$('restart-confirm').hidden=false;$('confirm-restart').focus();};
     $('cancel-restart').onclick=()=>{$('restart-confirm').hidden=true;$('restart').focus();};
-    $('confirm-restart').onclick=()=>{current=quest.start;state=QuestRules.initialState(variables);$('restart-confirm').hidden=true;render();$('scene-title').focus({preventScroll:true});window.scrollTo({top:0,behavior:'auto'});};
+    $('confirm-restart').onclick=()=>{soundtrack.dispose();current=quest.start;state=QuestRules.initialState(variables);$('restart-confirm').hidden=true;render();$('scene-title').focus({preventScroll:true});window.scrollTo({top:0,behavior:'auto'});};
     render();
   }
   function build(project){
     const source=service.forExport(project);
+    music.validate(source);
     const glossary=source.atlasLinks?{atlasLinks:true,atlasEntries:(source.atlasEntries||[]).map(a=>({id:a.id,title:a.title,summary:a.summary,aliases:a.aliases||[]}))}:{};
-    const quest={version:1,title:source.title,start:source.start,...(source.characters?.length?{characters:source.characters}:{}),variables:source.variables||[],scenes:source.scenes.map(s=>({id:s.id,title:s.title,text:s.text,...(s.dialogue?{dialogue:true}:{}),...(s.speaker?{speaker:s.speaker}:{}),...(s.actors?.length?{actors:s.actors}:{}),...(s.image?{image:s.image}:{}),choices:s.choices.map(c=>({text:c.text,target:c.target,...(c.check?{check:c.check}:{}),zone:c.zone||[],conditions:c.conditions||[],conditionMode:c.conditionMode||'all',effects:c.effects||[]}))}))};
+    const soundtrack=(source.soundtrack||[]).map(t=>({id:t.id,title:t.title,audio:t.audio}));
+    const quest={version:1,title:source.title,start:source.start,...(source.characters?.length?{characters:source.characters}:{}),...(soundtrack.length?{soundtrack}:{}),variables:source.variables||[],scenes:source.scenes.map(s=>{const action=music.normalizeAction(s.music);return {id:s.id,title:s.title,text:s.text,...(s.dialogue?{dialogue:true}:{}),...(s.speaker?{speaker:s.speaker}:{}),...(s.actors?.length?{actors:s.actors}:{}),...(s.image?{image:s.image}:{}),...(action?{music:action}:{}),choices:s.choices.map(c=>({text:c.text,target:c.target,...(c.check?{check:c.check}:{}),zone:c.zone||[],conditions:c.conditions||[],conditionMode:c.conditionMode||'all',effects:c.effects||[]}))};})};
     Object.assign(quest,glossary);
-    rules.validateVariables(quest.variables);layers.validate(quest);
+    rules.validateVariables(quest.variables);layers.validate(quest);music.validate(quest);
     const ids=new Set(quest.scenes.map(s=>s.id));
     if(!ids.has(quest.start)||ids.size!==quest.scenes.length)throw Error('Проверьте начальную сцену и идентификаторы.');
     for(const scene of quest.scenes){
@@ -90,7 +95,7 @@
 <section id="restart-confirm" hidden aria-label="Начать заново"><p>Начать квест заново? Текущее прохождение будет сброшено.</p><button id="confirm-restart">Начать заново</button><button id="cancel-restart">Продолжить игру</button></section>
 <main><div id="game-saves"></div><div class="ornament" aria-hidden="true">✦</div><h1 id="scene-title" tabindex="-1"></h1><div id="image-wrap" hidden><div class="image-surface"><img id="image" alt="Локация"><div id="actors" class="actor-layer"></div><div id="image-paths" class="image-paths"></div><canvas id="zones" aria-label="Зоны действий на изображении"></canvas></div><div class="image-tools"><span id="hotspot" role="status"></span><label><input id="show-zones" type="checkbox"> Подсветить зоны</label></div></div><p id="image-error" class="muted" hidden>Изображение недоступно. Используйте кнопки действий.</p><p id="scene-text" class="scene-text"></p><p id="roll-result" role="status"></p><div id="choices"></div><p id="ending" hidden>КОНЕЦ ИСТОРИИ</p><p id="no-paths" class="muted" hidden>Нет доступных действий. Можно начать квест заново.</p><details id="state-panel"><summary>Персонаж и инвентарь</summary><div id="state"></div></details><noscript>Для прохождения квеста включите JavaScript в браузере.</noscript></main><footer>Создано в Макроквесте · Продолжить игру можно через «Сохранения»</footer>
 <script id="quest-data" type="application/json">${safeJSON(quest)}</script>
-<script>${rules.standaloneSource()}\n${zones.standaloneSource()}\n${saves.standaloneSource()}\n${atlas.standaloneSource()}\n${layers.standaloneSource()}\n(${runQuest.toString()})();</script></body></html>`;
+<script>${rules.standaloneSource()}\n${zones.standaloneSource()}\n${saves.standaloneSource()}\n${atlas.standaloneSource()}\n${layers.standaloneSource()}\n${music.standaloneSource()}\n(${runQuest.toString()})();</script></body></html>`;
   }
   const api={build};
   if(typeof module!=='undefined')module.exports=api;else root.QuestHTML=api;
